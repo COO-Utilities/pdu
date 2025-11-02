@@ -3,7 +3,7 @@ import types
 import pytest
 from unittest.mock import patch
 
-from EMAT08_10 import EatonEMAT
+from pdu.EMAT08_10 import EatonEMAT
 
 
 class FakeSocket:
@@ -45,10 +45,6 @@ class FakeSocket:
 
 @pytest.fixture
 def fake_socket(monkeypatch):
-    """
-    Patch socket.create_connection to return a FakeSocket.
-    Also return a handle to that FakeSocket so tests can preload replies.
-    """
     holder = {}
 
     def fake_create_connection(addr, timeout=None):
