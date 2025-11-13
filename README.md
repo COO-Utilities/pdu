@@ -1,102 +1,59 @@
-# python-package-template
-This is a template on how to package a simple Python project
+# pdu — Low-level util for Power Distribution Units
 
-## Table of Contents
+Minimal Python package for controlling PDUs.  
+Currently includes a **TCP** driver for **Eaton EMAT-08 / EMAT-10** units.
 
-1. Installation
-2. Setting Up Your Package
-3. Installing Dependencies
-4. Building Your Package
-5. Publishing to PyPI
+- Thread-safe send/receive
 
-## Installation
+## Features
 
-To install the package in editable mode (ideal for development), follow these steps:
+- **TCP** protocol
+- CRLF framing on write, read with configurable timeout.
+- Helpers: `outlet_on(n)`, `outlet_off(n)`, `outlet_status(n)`, `get_atomic_value("model" | "firmware")`.
+- Safe to subclass or retarget to other PDUs
 
-### Requirements
+## Requirements
 
-- Python 3.7 or higher
-- `pip` (ensure it's the latest version)
-- `setuptools` 42 or higher (for building the package)
+- Python **3.8+** (tested on 3.8/3.10/3.12)
+- `pip`, `setuptools`, `wheel`
+- Network access to the PDU’s **TCP ASCII control port**
+- Dependency: `hardware_device_base` (installed automatically via `pyproject.toml`)
 
-### 1. Clone the repository
+## Quickstart
 
-First, clone the repository to your local machine:
-
+### Install (editable for development)
 ```bash
-git clone https://github.com/yourusername/your-package-name.git
-cd your-package-name
-```
-
-### 2. Set Up Your Python Environment
-
-Create a virtual environment for your package:
-
-```bash
-python -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Build Dependencies
-
-Make sure setuptools and pip are up to date:
-
-```bash
-pip install --upgrade pip setuptools wheel
-```
-
-## Setting Up Your Package
-### 1. Update pyproject.toml
-
-The pyproject.toml file contains the configuration for building and packaging your Python project. You'll want to customize this to reflect your package's name, version, dependencies, license, etc.
-```yml
-    name: The name of your package.
-    version: The version of your package (e.g., "0.1.0").
-    dependencies: List any runtime dependencies your package requires (e.g., requests, numpy).
-    license: Specify your package's license, either as text or a file. For example:
-        license = { text = "MIT" }
-        Or, if you have a LICENSE file: license = { file = "LICENSE.txt" }
-```
-
-### 2. Update README.md
-
-Edit this README file to reflect your package's functionality.
-
-## Installing Dependencies
-
-To install your package in editable mode for development, use the following command:
-
-```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -U pip setuptools wheel
 pip install -e .
 ```
 
-This will install the package, allowing you to edit it directly and have changes take effect immediately without reinstalling.
-
-To install any optional dependencies, such as development dependencies, use:
-
+### Use the Eaton EMAT TCP driver
 ```bash
-pip install -e .[dev]
+from pdu.EMAT08_10 import EatonEMAT
+
+# Create driver (3s read timeout, CRLF framing)
+pdu = EatonEMAT(read_timeout=3.0)
+
+# Connect to the PDU's ASCII TCP port (replace with your IP/port)
+assert pdu.connect("192.168.1.50", 1234)
+
+# Turn outlet 3 ON
+pdu.outlet_on(3)
+
+# Query outlet 3 status
+reply = pdu.outlet_status(3)
+print("Status:", reply)
+
+# Device info (templates map to your firmware commands)
+print("Model:", pdu.get_atomic_value("model"))
+print("Firmware:", pdu.get_atomic_value("firmware"))
+
+# Clean up
+pdu.disconnect()
 ```
 
-## Building Your Package
 
-To build your package for distribution (e.g., for uploading to PyPI), you can use:
 
-```bash
-python -m build
-```
 
-This will create .tar.gz and .whl files in the dist/ directory.
-
-## Publishing to PyPI
-
-To publish your package to PyPI, you can use the twine tool:
-
-```bash
-pip install twine
-twine upload dist/*
-```
-
-You'll need to have a PyPI account and have your credentials set up for this.
-
----
