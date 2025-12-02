@@ -65,9 +65,9 @@ class EatonEMAT(HardwareDeviceBase):
         # {n} will be replaced with 1-based outlet index.
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
         self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
-        self.cmd_outlet_status: str = "PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
-        self.cmd_device_model: str = "PDU.PowerSummary.iManufacturer"
-        self.cmd_firmware_ver: str = "PDU.PowerSummary.iVersion"
+        self.cmd_outlet_status: str = "set PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
+        self.cmd_device_model: str = "set PDU.PowerSummary.iManufacturer"
+        self.cmd_firmware_ver: str = "set PDU.PowerSummary.iVersion"
 
     def connect( 
         self,
