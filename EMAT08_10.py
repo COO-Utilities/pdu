@@ -1,3 +1,4 @@
+""" Eaton EMAT-08/10 PDU interface class """
 from __future__ import annotations
 
 import time
@@ -8,6 +9,7 @@ try:
     from hardware_device_base import HardwareDeviceBase
 except ModuleNotFoundError:
     from hardware_device_base.hardware_device_base import HardwareDeviceBase  # type: ignore
+
 
 class EatonEMAT(HardwareDeviceBase):
     """
@@ -43,6 +45,7 @@ class EatonEMAT(HardwareDeviceBase):
     'Outlet 3: ON'
     >>> pdu.disconnect()
     """
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -69,7 +72,7 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_device_model: str = "set PDU.PowerSummary.iManufacturer"
         self.cmd_firmware_ver: str = "set PDU.PowerSummary.iVersion"
 
-    def connect( 
+    def connect(  # pylint: disable=W0221
         self,
         host: str,
         port: int,
@@ -77,6 +80,7 @@ class EatonEMAT(HardwareDeviceBase):
         username: Optional[str] = None,  # kept for API compatibility, unused
         password: Optional[str] = None,  # kept for API compatibility, unused
     ) -> bool:
+        # pylint: disable=unused-argument
         """
         Open a raw TCP connection to the PDU.
 
@@ -129,7 +133,7 @@ class EatonEMAT(HardwareDeviceBase):
             self._set_connected(False)
             self.logger.info("Disconnected")
 
-    def _send_command(self, command: str, *args) -> bool:
+    def _send_command(self, command: str, *args) -> bool:  # pylint: disable=W0221
         """
         Send a command string to the device over TCP.
 
