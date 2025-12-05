@@ -1,7 +1,7 @@
 # pdu — Low-level util for Power Distribution Units
 
 Minimal Python package for controlling PDUs.  
-Currently includes a **TCP** driver for **Eaton EMAT-08 / EMAT-10** units.
+Currently includes a **SSH** driver for **Eaton EMAT-08 / EMAT-10** units.
 
 - Thread-safe send/receive
 
@@ -29,29 +29,36 @@ pip install -U pip setuptools wheel
 pip install -e .
 ```
 
-### Use the Eaton EMAT TCP driver
-```bash
+### Use the Eaton EMAT SSH driver
+
+```python
 from pdu.EMAT08_10 import EatonEMAT
 
-# Create driver (3s read timeout, CRLF framing)
-pdu = EatonEMAT(read_timeout=3.0)
+# Create driver (3s read timeout)
+pdu = EatonEMAT()
 
-# Connect to the PDU's ASCII TCP port (replace with your IP/port)
-assert pdu.connect("192.168.1.50", 1234)
+# Connect over SSH (default port is 22)
+assert pdu.connect(
+    host="192.168.1.50",
+    port=22,
+    username="admin",
+    password="your_password",
+)
 
 # Turn outlet 3 ON
 pdu.outlet_on(3)
 
-# Query outlet 3 status
+# Query outlet 3 status (reads PresentStatus.SwitchOnOff)
 reply = pdu.outlet_status(3)
 print("Status:", reply)
 
-# Device info (templates map to your firmware commands)
-print("Model:", pdu.get_atomic_value("model"))
-print("Firmware:", pdu.get_atomic_value("firmware"))
+# Device info
+print("Model:", pdu.get_atomic_value("model"))       # PDU.PowerSummary.iManufacturer
+print("Firmware:", pdu.get_atomic_value("firmware")) # PDU.PowerSummary.iVersion
 
 # Clean up
 pdu.disconnect()
+
 ```
 
 
