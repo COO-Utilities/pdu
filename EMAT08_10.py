@@ -29,9 +29,9 @@ class EatonEMAT(HardwareDeviceBase):
         >>> pdu = EatonEMAT()
         >>> pdu.connect("192.168.1.50", 23, username="admin", password="secret")
         True
-        >>> pdu.outlet_on(3)                    # set PDU.OutletSystem.Outlet[3].DelayBeforeStartup 0
+        >>> pdu.outlet_on(3)              # set PDU.OutletSystem.Outlet[3].DelayBeforeStartup 0
         True
-        >>> pdu.outlet_status(3)                # get PDU.OutletSystem.Outlet[3].PresentStatus.SwitchOnOff
+        >>> pdu.outlet_status(3)          # get PDU.OutletSystem.Outlet[3].PresentStatus.SwitchOnOff
         'On'  # device-dependent text
         >>> pdu.get_atomic_value("model")       # get PDU.PowerSummary.iManufacturer
         'Eaton ...'
@@ -240,6 +240,7 @@ class EatonEMAT(HardwareDeviceBase):
         await self._writer.drain()
         # read until prompt, strip trailing prompt, return text
         data = await self._read_until_prompt()
+        self.logger.debug("Received data: %s", data)
         return self._strip_prompt(data)
 
     def _read_reply(self) -> Union[str, None]:
@@ -252,6 +253,7 @@ class EatonEMAT(HardwareDeviceBase):
         return self._last_reply if self._last_reply is not None else ""
 
     def get_atomic_value(self, item: str) -> Union[str, None]:
+        """ Retrieve atomic values """
         mapping = {
             "model": self.cmd_device_model,
             "firmware": self.cmd_firmware_ver,
@@ -265,18 +267,21 @@ class EatonEMAT(HardwareDeviceBase):
         return self._read_reply()
 
     def outlet_on(self, n: int) -> bool:
+        """ Turn specified outlet on. """
         if n < 1:
             self.logger.error("Outlet index must be >= 1")
             return False
         return self._send_command(self.cmd_outlet_on.format(n=n))
 
     def outlet_off(self, n: int) -> bool:
+        """ Turn specified outlet off. """
         if n < 1:
             self.logger.error("Outlet index must be >= 1")
             return False
         return self._send_command(self.cmd_outlet_off.format(n=n))
 
     def outlet_status(self, n: int) -> Optional[str]:
+        """ Get outlet status. """
         if n < 1:
             self.logger.error("Outlet index must be >= 1")
             return None
