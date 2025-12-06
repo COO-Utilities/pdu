@@ -72,8 +72,12 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
         self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
         self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
+        self.cmd_active_power: str = "get PDU.OutletSystem.Outlet[{n}].ActivePower"
+        self.cmd_apparent_power: str = "get PDU.OutletSystem.Outlet[{n}].ApparentPower"
+        self.cmd_current: str = "get PDU.OutletSystem.Outlet[{n}].Current"
         self.cmd_device_model: str = "get PDU.PowerSummary.iManufacturer"
         self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
+
 
         # Optional login prompt substrings
         self._login_user_prompts: List[str] = ["login:", "username:", "user:"]
@@ -241,7 +245,8 @@ class EatonEMAT(HardwareDeviceBase):
         # read until prompt, strip trailing prompt, return text
         data = await self._read_until_prompt()
         self.logger.debug("Received data: %s", data)
-        return self._strip_prompt(data)
+        retval = data.split()[-3]
+        return retval
 
     def _read_reply(self) -> Union[str, None]:
         """
@@ -252,12 +257,20 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_atomic_value(self, item: str) -> Union[str, None]:
+    def get_atomic_value(self, item: str, n:int = 0) -> Union[str, None]:
         """ Retrieve atomic values """
-        mapping = {
-            "model": self.cmd_device_model,
-            "firmware": self.cmd_firmware_ver,
-        }
+        if n == 0:
+            mapping = {
+                "model": self.cmd_device_model,
+                "firmware": self.cmd_firmware_ver,
+            }
+        else:
+            mapping = {
+                "status": self.cmd_outlet_status.format(n=n),
+                "current": self.cmd_current.format(n=n),
+                "apparent_power": self.cmd_apparent_power.format(n=n),
+                "active_power": self.cmd_active_power.format(n=n)
+            }
         cmd = mapping.get(item.lower())
         if not cmd:
             self.logger.error("Unsupported item: %s", item)
