@@ -50,6 +50,7 @@ class EatonEMAT(HardwareDeviceBase):
         prompt_pattern: str | bytes = rb"[>#]\s*$",  # end-of-line '>' or '#'
         line_terminator: str = "\r\n",
     ) -> None:
+        # pylint: disable=too-many-arguments
         super().__init__(log, logfile)
 
         # Telnet reader/writer
