@@ -69,18 +69,34 @@ class EatonEMAT(HardwareDeviceBase):
         # Buffer for last command’s reply
         self._last_reply: Optional[str] = None
 
-        # Command templates (override per firmware). {n} is 1-based
+        # Command templates for outlet items (override per firmware). {n} is 1-based
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
         self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
         self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
+        self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent"
         self.cmd_active_power: str = "get PDU.OutletSystem.Outlet[{n}].ActivePower"
         self.cmd_apparent_power: str = "get PDU.OutletSystem.Outlet[{n}].ApparentPower"
         self.cmd_reactive_power: str = "get PDU.OutletSystem.Outlet[{n}].ReactivePower"
+        self.cmd_config_current: str = "get PDU.OutletSystem.Outlet[{n}].ConfigCurrent"
         self.cmd_current: str = "get PDU.OutletSystem.Outlet[{n}].Current"
+        self.cmd_type: str = "get PDU.OutletSystem.Outlet[{n}].Type"
+        self.cmd_peak_factor: str = "get PDU.OutletSystem.Outlet[{n}].PeakFactor"
+        self.cmd_phase_id: str = "get PDU.OutletSystem.Outlet[{n}].PhaseID"
+        self.cmd_pole_id: str = "get PDU.OutletSystem.Outlet[{n}].PoleID"
+        self.cmd_power_factor: str = "get PDU.OutletSystem.Outlet[{n}].PowerFactor"
+        self.cmd_switchable: str = "get PDU.OutletSystem.Outlet[{n}].Switchable"
+        self.cmd_designator: str = "get PDU.OutletSystem.Outlet[{n}].iDesignator"
+        self.cmd_name: str = "get PDU.OutletSystem.Outlet[{n}].iName"
+        self.cmd_outlet_id: str = "get PDU.OutletSystem.Outlet[{n}].OutletID"
         self.cmd_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy"
+        self.cmd_reset_statistics: str = "set PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1"
+        self.cmd_reset_time: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Time"
+        self.cmd_reset_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Energy"
         self.cmd_auto_restart: str = "get PDU.OutletSystem.Outlet[{n}].AutomaticRestart"
+        # Command templates for device items.
         self.cmd_device_model: str = "get PDU.PowerSummary.iManufacturer"
         self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
+        self.cmd_outlet_count: str = "get PDU.OutletSystem.Outlet.Count"
 
 
         # Optional login prompt substrings
@@ -263,22 +279,28 @@ class EatonEMAT(HardwareDeviceBase):
 
     def get_atomic_value(self, item: str, n:int = None) -> Union[str, None]:
         """ Retrieve atomic values """
-        if n is None:
-            mapping = {
-                "model": self.cmd_device_model,
-                "firmware": self.cmd_firmware_ver,
-            }
+        mapping_device = {
+            "model": self.cmd_device_model,
+            "firmware": self.cmd_firmware_ver,
+        }
+        mapping_outlets = {
+            "status": self.cmd_outlet_status.format(n=n),
+            "current": self.cmd_current.format(n=n),
+            "energy": self.cmd_energy.format(n=n),
+            "apparent_power": self.cmd_apparent_power.format(n=n),
+            "active_power": self.cmd_active_power.format(n=n),
+            "reactive_power": self.cmd_reactive_power.format(n=n),
+            "auto_restart": self.cmd_auto_restart.format(n=n)
+        }
+
+        if item not in mapping_outlets and item not in mapping_device:
+            self.logger.error("Unsupported item: %s", item)
+            return None
+
+        if item in mapping_device:
+            cmd = mapping_device.get(item.lower())
         else:
-            mapping = {
-                "status": self.cmd_outlet_status.format(n=n),
-                "current": self.cmd_current.format(n=n),
-                "energy": self.cmd_energy.format(n=n),
-                "apparent_power": self.cmd_apparent_power.format(n=n),
-                "active_power": self.cmd_active_power.format(n=n),
-                "reactive_power": self.cmd_reactive_power.format(n=n),
-                "auto_restart": self.cmd_auto_restart.format(n=n)
-            }
-        cmd = mapping.get(item.lower())
+            cmd = mapping_outlets.get(item.lower())
         if not cmd:
             self.logger.error("Unsupported item: %s", item)
             return None
