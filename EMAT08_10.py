@@ -77,7 +77,7 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_apparent_power: str = "get PDU.OutletSystem.Outlet[{n}].ApparentPower"
         self.cmd_reactive_power: str = "get PDU.OutletSystem.Outlet[{n}].ReactivePower"
         self.cmd_current: str = "get PDU.OutletSystem.Outlet[{n}].Current"
-        self.cmd_energy: str = "get PDU.OutletSystem.Outlet[{n}].Energy"
+        self.cmd_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy"
         self.cmd_auto_restart: str = "get PDU.OutletSystem.Outlet[{n}].AutomaticRestart"
         self.cmd_device_model: str = "get PDU.PowerSummary.iManufacturer"
         self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
