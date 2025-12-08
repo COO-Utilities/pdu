@@ -3,7 +3,7 @@ import types
 import pytest
 from unittest.mock import patch
 
-from EMAT08_10 import EatonEMAT
+from emat08_10 import EatonEMAT
 
 
 class FakeSocket:

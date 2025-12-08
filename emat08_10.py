@@ -26,7 +26,7 @@ class EatonEMAT(HardwareDeviceBase):
     Example
     -------
     Basic usage:
-        >>> from EMAT08_10 import EatonEMAT
+        >>> from emat08_10 import EatonEMAT
         >>> pdu = EatonEMAT()
         >>> pdu.connect("192.168.1.50", 23, username="admin", password="secret")
         True
@@ -324,6 +324,12 @@ class EatonEMAT(HardwareDeviceBase):
             "reset_energy": self.cmd_reset_energy.format(n=n),
             "auto_restart": self.cmd_auto_restart.format(n=n)
         }
+
+        if "help" in item:
+            for k, v in mapping_device.items():
+                print(k)
+            for k, v in mapping_outlets.items():
+                print(k)
 
         if item not in mapping_outlets and item not in mapping_device:
             self.logger.error("Unsupported item: %s", item)

@@ -32,7 +32,7 @@ pip install -e .
 ### Use the Eaton EMAT SSH driver
 
 ```python
-from pdu.EMAT08_10 import EatonEMAT
+from emat08_10 import EatonEMAT
 
 # Create driver (3s read timeout)
 pdu = EatonEMAT()
