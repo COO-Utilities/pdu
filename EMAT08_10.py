@@ -73,29 +73,44 @@ class EatonEMAT(HardwareDeviceBase):
         # Command templates for outlet items (override per firmware). {n} is 1-based
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
         self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
+        # SwitchOnOff: 0 - Off, 1 - On
         self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
+        # OverCurrent: 0 - Normal, 1 - Low warn, 2 - Low critical, 3 - High warn, 4 - High critical
         self.cmd_overcurrent_status: str = \
             "get PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent"
+        # ActivePower, ApparentPower, ReactivePower: Watts
         self.cmd_active_power: str = "get PDU.OutletSystem.Outlet[{n}].ActivePower"
         self.cmd_apparent_power: str = "get PDU.OutletSystem.Outlet[{n}].ApparentPower"
         self.cmd_reactive_power: str = "get PDU.OutletSystem.Outlet[{n}].ReactivePower"
+        # ConfigCurrent, Current: Amps
         self.cmd_config_current: str = "get PDU.OutletSystem.Outlet[{n}].ConfigCurrent"
         self.cmd_current: str = "get PDU.OutletSystem.Outlet[{n}].Current"
+        # Type: 0..255
         self.cmd_type: str = "get PDU.OutletSystem.Outlet[{n}].Type"
+        #
         self.cmd_peak_factor: str = "get PDU.OutletSystem.Outlet[{n}].PeakFactor"
         self.cmd_phase_id: str = "get PDU.OutletSystem.Outlet[{n}].PhaseID"
         self.cmd_pole_id: str = "get PDU.OutletSystem.Outlet[{n}].PoleID"
         self.cmd_power_factor: str = "get PDU.OutletSystem.Outlet[{n}].PowerFactor"
+        # Switchable: 0 - Disabled, 1 - Enabled
         self.cmd_switchable: str = "get PDU.OutletSystem.Outlet[{n}].Switchable"
+        # iDesignator, iName: <string>
         self.cmd_designator: str = "get PDU.OutletSystem.Outlet[{n}].iDesignator"
         self.cmd_name: str = "get PDU.OutletSystem.Outlet[{n}].iName"
+        # OutletID: <int>
         self.cmd_outlet_id: str = "get PDU.OutletSystem.Outlet[{n}].OutletID"
+        # Energy: Watt-hours
         self.cmd_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy"
+        # ModuleReset: reset statistics for outlet
         self.cmd_reset_statistics: str = \
             "set PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1"
+        # Reset.Time: Unix sec of last reset
         self.cmd_reset_time: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Time"
+        # Reset.Energy: Energy at last reset
         self.cmd_reset_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Energy"
+        # AutomaticRestart: 0 - not powered, 1 - powered, 2 - last state at startup
         self.cmd_auto_restart: str = "get PDU.OutletSystem.Outlet[{n}].AutomaticRestart"
+        self.cmd_set_auto_restart: str = "set PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}"
         # Command templates for device items.
         self.cmd_device_model: str = "get PDU.PowerSummary.iManufacturer"
         self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
@@ -354,6 +369,19 @@ class EatonEMAT(HardwareDeviceBase):
             self.logger.error("Outlet index must be >= 1")
             return False
         return self._send_command(self.cmd_reset_statistics.format(n=n))
+
+    def set_autostart(self, n: int, p: int) -> bool:
+        """ Set autostart status for given outlet.
+        n - outlet number (1-8)
+        p - state: 0 - not powered at startup, 1 - powered at startup, 2 - last state at startup
+        """
+        if n < 1:
+            self.logger.error("Outlet index must be >= 1")
+            return False
+        if p < 0 or p > 2:
+            self.logger.error("Outlet autostart status must be between 0 and 2")
+            return False
+        return self._send_command(self.cmd_set_auto_restart.format(n=n, p=p))
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
         """Wait for any of the prompt substrings, then write the string."""
