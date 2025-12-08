@@ -261,9 +261,9 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_atomic_value(self, item: str, n:int = 0) -> Union[str, None]:
+    def get_atomic_value(self, item: str, n:int = None) -> Union[str, None]:
         """ Retrieve atomic values """
-        if n == 0:
+        if n is None:
             mapping = {
                 "model": self.cmd_device_model,
                 "firmware": self.cmd_firmware_ver,
