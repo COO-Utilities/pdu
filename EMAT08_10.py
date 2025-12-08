@@ -1,3 +1,4 @@
+""" Class for Eaton EMAT-08/10 power distribution unit. """
 from __future__ import annotations
 
 import asyncio
@@ -89,7 +90,8 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_name: str = "get PDU.OutletSystem.Outlet[{n}].iName"
         self.cmd_outlet_id: str = "get PDU.OutletSystem.Outlet[{n}].OutletID"
         self.cmd_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy"
-        self.cmd_reset_statistics: str = "set PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1"
+        self.cmd_reset_statistics: str = \
+            "set PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1"
         self.cmd_reset_time: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Time"
         self.cmd_reset_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Energy"
         self.cmd_auto_restart: str = "get PDU.OutletSystem.Outlet[{n}].AutomaticRestart"
@@ -112,9 +114,9 @@ class EatonEMAT(HardwareDeviceBase):
         if self._loop is not None and self._loop_thread and self._loop_thread.is_alive():
             return self._loop
 
-        def _loop_runner(loop: asyncio.AbstractEventLoop) -> None:
-            asyncio.set_event_loop(loop)
-            loop.run_forever()
+        def _loop_runner(run_loop: asyncio.AbstractEventLoop) -> None:
+            asyncio.set_event_loop(run_loop)
+            run_loop.run_forever()
 
         loop = asyncio.new_event_loop()
         t = threading.Thread(target=_loop_runner, args=(loop,), name="telnetlib3-loop", daemon=True)
@@ -282,6 +284,7 @@ class EatonEMAT(HardwareDeviceBase):
         mapping_device = {
             "model": self.cmd_device_model,
             "firmware": self.cmd_firmware_ver,
+            "outlet_count": self.cmd_outlet_count
         }
         mapping_outlets = {
             "status": self.cmd_outlet_status.format(n=n),
@@ -290,6 +293,18 @@ class EatonEMAT(HardwareDeviceBase):
             "apparent_power": self.cmd_apparent_power.format(n=n),
             "active_power": self.cmd_active_power.format(n=n),
             "reactive_power": self.cmd_reactive_power.format(n=n),
+            "config_current": self.cmd_config_current.format(n=n),
+            "type": self.cmd_type.format(n=n),
+            "peak_factor": self.cmd_peak_factor.format(n=n),
+            "phase_id": self.cmd_phase_id.format(n=n),
+            "pole_id": self.cmd_pole_id.format(n=n),
+            "power_factor": self.cmd_power_factor.format(n=n),
+            "switchable": self.cmd_switchable.format(n=n),
+            "designator": self.cmd_designator.format(n=n),
+            "name": self.cmd_name.format(n=n),
+            "outlet_id": self.cmd_outlet_id.format(n=n),
+            "reset_time": self.cmd_reset_time.format(n=n),
+            "reset_energy": self.cmd_reset_energy.format(n=n),
             "auto_restart": self.cmd_auto_restart.format(n=n)
         }
 
@@ -330,6 +345,13 @@ class EatonEMAT(HardwareDeviceBase):
         if not self._send_command(self.cmd_outlet_status.format(n=n)):
             return None
         return self._read_reply()
+
+    def reset_statistics(self, n:int) -> bool:
+        """ Reset energy statistics for given outlet. """
+        if n < 1:
+            self.logger.error("Outlet index must be >= 1")
+            return False
+        return self._send_command(self.cmd_reset_statistics.format(n=n))
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
         """Wait for any of the prompt substrings, then write the string."""
