@@ -75,7 +75,10 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
         self.cmd_active_power: str = "get PDU.OutletSystem.Outlet[{n}].ActivePower"
         self.cmd_apparent_power: str = "get PDU.OutletSystem.Outlet[{n}].ApparentPower"
+        self.cmd_reactive_power: str = "get PDU.OutletSystem.Outlet[{n}].ReactivePower"
         self.cmd_current: str = "get PDU.OutletSystem.Outlet[{n}].Current"
+        self.cmd_energy: str = "get PDU.OutletSystem.Outlet[{n}].Energy"
+        self.cmd_auto_restart: str = "get PDU.OutletSystem.Outlet[{n}].AutomaticRestart"
         self.cmd_device_model: str = "get PDU.PowerSummary.iManufacturer"
         self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
 
@@ -269,8 +272,11 @@ class EatonEMAT(HardwareDeviceBase):
             mapping = {
                 "status": self.cmd_outlet_status.format(n=n),
                 "current": self.cmd_current.format(n=n),
+                "energy": self.cmd_energy.format(n=n),
                 "apparent_power": self.cmd_apparent_power.format(n=n),
-                "active_power": self.cmd_active_power.format(n=n)
+                "active_power": self.cmd_active_power.format(n=n),
+                "reactive_power": self.cmd_reactive_power.format(n=n),
+                "auto_restart": self.cmd_auto_restart.format(n=n)
             }
         cmd = mapping.get(item.lower())
         if not cmd:
