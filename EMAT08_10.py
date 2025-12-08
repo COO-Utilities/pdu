@@ -74,7 +74,8 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
         self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
         self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
-        self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent"
+        self.cmd_overcurrent_status: str = \
+            "get PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent"
         self.cmd_active_power: str = "get PDU.OutletSystem.Outlet[{n}].ActivePower"
         self.cmd_apparent_power: str = "get PDU.OutletSystem.Outlet[{n}].ApparentPower"
         self.cmd_reactive_power: str = "get PDU.OutletSystem.Outlet[{n}].ReactivePower"
@@ -288,6 +289,7 @@ class EatonEMAT(HardwareDeviceBase):
         }
         mapping_outlets = {
             "status": self.cmd_outlet_status.format(n=n),
+            "overcurrent_status": self.cmd_overcurrent_status.format(n=n),
             "current": self.cmd_current.format(n=n),
             "energy": self.cmd_energy.format(n=n),
             "apparent_power": self.cmd_apparent_power.format(n=n),
