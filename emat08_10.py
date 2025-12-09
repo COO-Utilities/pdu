@@ -356,6 +356,18 @@ class EatonEMAT(HardwareDeviceBase):
         if item in mapping_device:
             cmd = mapping_device.get(item.lower())
         else:
+            if not self.initialized:
+                self.logger.error("Device is not initialized")
+                return None
+            if isinstance(n, int):
+                if n < 1 or n > self.outlet_count:
+                    self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+                    return None
+            else:
+                if isinstance(n, str):
+                    if n != "x":
+                        self.logger.error("Outlet index must be an integer or string x")
+                        return None
             cmd = mapping_outlets.get(item.lower())
         if not cmd:
             self.logger.error("Unsupported item: %s", item)
@@ -366,6 +378,9 @@ class EatonEMAT(HardwareDeviceBase):
 
     def outlet_on(self, n: int) -> bool:
         """ Turn specified outlet on. """
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
+            return False
         if n < 1 or n > self.outlet_count:
             self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return False
@@ -376,6 +391,9 @@ class EatonEMAT(HardwareDeviceBase):
 
     def outlet_off(self, n: int) -> bool:
         """ Turn specified outlet off. """
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
+            return False
         if n < 1 or n > self.outlet_count:
             self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return False
@@ -386,6 +404,9 @@ class EatonEMAT(HardwareDeviceBase):
 
     def outlet_status(self, n: int) -> Optional[str]:
         """ Get outlet status. """
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
+            return None
         if n < 1 or n > self.outlet_count:
             self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return None
@@ -395,8 +416,11 @@ class EatonEMAT(HardwareDeviceBase):
 
     def reset_statistics(self, n:int) -> bool:
         """ Reset energy statistics for given outlet. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
+            return False
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return False
         return self._send_command(self.cmd_reset_statistics.format(n=n))
 
@@ -405,8 +429,11 @@ class EatonEMAT(HardwareDeviceBase):
         n - outlet number (1-8)
         p - state: 0 - not powered at startup, 1 - powered at startup, 2 - last state at startup
         """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
+            return False
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return False
         if p < 0 or p > 2:
             self.logger.error("Outlet autostart status must be between 0 and 2")
