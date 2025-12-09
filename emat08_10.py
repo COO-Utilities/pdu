@@ -356,10 +356,10 @@ class EatonEMAT(HardwareDeviceBase):
         if item in mapping_device:
             cmd = mapping_device.get(item.lower())
         else:
-            if not self.initialized:
-                self.logger.error("Device is not initialized")
-                return None
             if isinstance(n, int):
+                if not self.initialized:
+                    self.logger.error("Device is not initialized")
+                    return None
                 if n < 1 or n > self.outlet_count:
                     self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
                     return None
