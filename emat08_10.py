@@ -73,8 +73,10 @@ class EatonEMAT(HardwareDeviceBase):
         # Device properties
         self.outlet_count: int = 0
         self.outlet_names: List[str] = []
+        self.outlet_onoff: List[int] = []
         self.model: str = ""
         self.firmware: str = ""
+        self.initialized = False
 
         # Command templates for outlet items (override per firmware). {n} is 1-based
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
@@ -364,22 +366,28 @@ class EatonEMAT(HardwareDeviceBase):
 
     def outlet_on(self, n: int) -> bool:
         """ Turn specified outlet on. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return False
-        return self._send_command(self.cmd_outlet_on.format(n=n))
+        if self._send_command(self.cmd_outlet_on.format(n=n)):
+            self.outlet_onoff[n-1] = 1
+            return True
+        return False
 
     def outlet_off(self, n: int) -> bool:
         """ Turn specified outlet off. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return False
-        return self._send_command(self.cmd_outlet_off.format(n=n))
+        if self._send_command(self.cmd_outlet_off.format(n=n)):
+            self.outlet_onoff[n-1] = 0
+            return True
+        return False
 
     def outlet_status(self, n: int) -> Optional[str]:
         """ Get outlet status. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return None
         if not self._send_command(self.cmd_outlet_status.format(n=n)):
             return None
@@ -416,6 +424,10 @@ class EatonEMAT(HardwareDeviceBase):
         names = self.get_atomic_value("name", "x")
         for name in names.split("|"):
             self.outlet_names.append(name)
+        statuses = self.get_atomic_value("status", "x")
+        for status in statuses.split("|"):
+            self.outlet_onoff.append(int(status))
+        self.initialized = True
         return True
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
