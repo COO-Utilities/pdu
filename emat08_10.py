@@ -283,7 +283,7 @@ class EatonEMAT(HardwareDeviceBase):
         # read until prompt, strip trailing prompt, return text
         data = await self._read_until_prompt()
         self.logger.debug("Received data: %s", data)
-        retval = data.split()[-3]
+        retval = data.split(self._eol)[-2].split('\r')[0]
         return retval
 
     def _read_reply(self) -> Union[str, None]:
@@ -295,7 +295,7 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_atomic_value(self, item: str, n:int = None) -> Union[str, None]:
+    def get_atomic_value(self, item: str, n:Union[int, str] = None) -> Union[str, None]:
         """ Retrieve atomic values """
         mapping_device = {
             "model": self.cmd_device_model,
@@ -329,7 +329,7 @@ class EatonEMAT(HardwareDeviceBase):
             print("Device items (no outlet number required:")
             for k in mapping_device:
                 print(k)
-            print("Outlet items (outlet number required):")
+            print("Outlet items (outlet number or x required):")
             for k in mapping_outlets:
                 print(k)
             return None
