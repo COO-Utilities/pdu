@@ -332,6 +332,7 @@ class EatonEMAT(HardwareDeviceBase):
             print("Outlet items (outlet number required):")
             for k in mapping_outlets:
                 print(k)
+            return None
 
         if item not in mapping_outlets and item not in mapping_device:
             self.logger.error("Unsupported item: %s", item)
