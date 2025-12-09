@@ -326,9 +326,11 @@ class EatonEMAT(HardwareDeviceBase):
         }
 
         if "help" in item:
-            for k, v in mapping_device.items():
+            print("Device items (no outlet number required:")
+            for k in mapping_device:
                 print(k)
-            for k, v in mapping_outlets.items():
+            print("Outlet items (outlet number required):")
+            for k in mapping_outlets:
                 print(k)
 
         if item not in mapping_outlets and item not in mapping_device:

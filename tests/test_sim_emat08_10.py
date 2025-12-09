@@ -1,7 +1,6 @@
+""" Basic tests for emat08_10 """
 import socket
-import types
 import pytest
-from unittest.mock import patch
 
 from emat08_10 import EatonEMAT
 
@@ -21,9 +20,11 @@ class FakeSocket:
         self.sent_data = []   # list[bytes]
 
     def settimeout(self, t):
+        """ set socket timeout """
         self._timeout = t
 
     def sendall(self, data: bytes):
+        """ send data to socket """
         self.sent_data.append(data)
 
     def push_rx(self, data: bytes):
@@ -40,11 +41,13 @@ class FakeSocket:
         raise socket.timeout("no more data")
 
     def close(self):
+        """ close socket """
         self._closed = True
 
 
 @pytest.fixture
 def fake_socket(monkeypatch):
+    """ Fake socket that stores outbound writes (sendall) """
     holder = {}
 
     def fake_create_connection(addr, timeout=None):
@@ -56,7 +59,8 @@ def fake_socket(monkeypatch):
     return holder
 
 
-def test_connect_sets_connected(fake_socket):
+def test_connect_sets_connected(test_socket):
+    """ Test connecting to emat08_10 """
     pdu = EatonEMAT(read_timeout=1.0)
 
     ok = pdu.connect("10.0.0.5", 1234)
@@ -64,15 +68,16 @@ def test_connect_sets_connected(fake_socket):
     assert pdu.is_connected() is True
 
     # Make sure the fake socket got created and timeout set
-    fs = fake_socket["instance"]
+    fs = test_socket["instance"]
     assert isinstance(fs, FakeSocket)
 
 
-def test_outlet_on_sends_command(fake_socket):
+def test_outlet_on_sends_command(test_socket):
+    """ test outlet on sends command """
     pdu = EatonEMAT(read_timeout=1.0)
     assert pdu.connect("10.0.0.5", 1234)
 
-    fs = fake_socket["instance"]
+    fs = test_socket["instance"]
 
     # default template is "ol on {n}" + "\r\n"
     sent_ok = pdu.outlet_on(2)
@@ -83,11 +88,12 @@ def test_outlet_on_sends_command(fake_socket):
     assert b"ol on 2\r\n" in joined
 
 
-def test_outlet_status_round_trip(fake_socket):
+def test_outlet_status_round_trip(test_socket):
+    """ test outlet status round trip """
     pdu = EatonEMAT(read_timeout=1.0)
     assert pdu.connect("10.0.0.5", 1234)
 
-    fs = fake_socket["instance"]
+    fs = test_socket["instance"]
 
     # preload reply for status query
     fs.push_rx(b"Outlet 3: OFF\r\n")
@@ -101,11 +107,12 @@ def test_outlet_status_round_trip(fake_socket):
     assert b"ol status 3\r\n" in joined
 
 
-def test_get_atomic_value_model(fake_socket):
+def test_get_atomic_value_model(test_socket):
+    """ test get_atomic_value_model """
     pdu = EatonEMAT(read_timeout=1.0)
     assert pdu.connect("10.0.0.5", 1234)
 
-    fs = fake_socket["instance"]
+    fs = test_socket["instance"]
 
     # When we call get_atomic_value("model"),
     # driver sends pdu.cmd_device_model (default "sys info")
@@ -120,11 +127,12 @@ def test_get_atomic_value_model(fake_socket):
     assert b"sys info\r\n" in joined
 
 
-def test_disconnect_closes(fake_socket):
+def test_disconnect_closes(test_socket):
+    """ test disconnect closes """
     pdu = EatonEMAT(read_timeout=1.0)
     assert pdu.connect("10.0.0.5", 1234)
 
-    fs = fake_socket["instance"]
+    fs = test_socket["instance"]
     assert getattr(fs, "_closed", False) is False
 
     pdu.disconnect()
