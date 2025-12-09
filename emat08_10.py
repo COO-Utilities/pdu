@@ -70,6 +70,12 @@ class EatonEMAT(HardwareDeviceBase):
         # Buffer for last command’s reply
         self._last_reply: Optional[str] = None
 
+        # Device properties
+        self.outlet_count: int = 0
+        self.outlet_names: List[str] = []
+        self.model: str = ""
+        self.firmware: str = ""
+
         # Command templates for outlet items (override per firmware). {n} is 1-based
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
         self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
@@ -296,7 +302,14 @@ class EatonEMAT(HardwareDeviceBase):
         return self._last_reply if self._last_reply is not None else ""
 
     def get_atomic_value(self, item: str, n:Union[int, str] = None) -> Union[str, None]:
-        """ Retrieve atomic values """
+        """ Retrieve atomic values
+
+        :param item: String item to retrieve
+        :param n: Outlet to retrieve item for (required for outlet items, not required for
+                    device items.
+
+        NOTE: n can be replaced with "x" to retrieve item values for all outlets
+        """
         mapping_device = {
             "model": self.cmd_device_model,
             "firmware": self.cmd_firmware_ver,
@@ -391,6 +404,19 @@ class EatonEMAT(HardwareDeviceBase):
             self.logger.error("Outlet autostart status must be between 0 and 2")
             return False
         return self._send_command(self.cmd_set_auto_restart.format(n=n, p=p))
+
+    def initialize(self) -> bool:
+        """ Initialize device properties. """
+        if not self.is_connected():
+            self.logger.error("Device not connected")
+            return False
+        self.outlet_count = int(self.get_atomic_value("outlet_count"))
+        self.model = self.get_atomic_value("model")
+        self.firmware = self.get_atomic_value("firmware")
+        names = self.get_atomic_value("name", "x")
+        for name in names.split("|"):
+            self.outlet_names.append(name)
+        return True
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
         """Wait for any of the prompt substrings, then write the string."""
