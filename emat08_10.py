@@ -74,10 +74,47 @@ class EatonEMAT(HardwareDeviceBase):
         self.outlet_count: int = 0
         self.outlet_names: List[str] = []
         self.outlet_onoff: List[int] = []
+        self.manufacturer: str = ""
         self.model: str = ""
-        self.firmware: str = ""
+        self.version: str = ""
+        self.serial: str = ""
         self.initialized = False
 
+        self.set_commands = {
+            "outlet_on": "PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0",
+            "outlet_off": "PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0",
+            "reset_statistics": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1",
+            "set_auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}"
+        }
+        self.get_outlet_commands = {
+            "outlet_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff",
+            "overcurrent_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent",
+            "active_power": "PDU.OutletSystem.Outlet[{n}].ActivePower",
+            "apparent_power": "PDU.OutletSystem.Outlet[{n}].ApparentPower",
+            "reactive_power": "PDU.OutletSystem.Outlet[{n}].ReactivePower",
+            "config_current": "PDU.OutletSystem.Outlet[{n}].ConfigCurrent",
+            "current": "PDU.OutletSystem.Outlet[{n}].Current",
+            "type": "PDU.OutletSystem.Outlet[{n}].Type",
+            "peak_factor": "PDU.OutletSystem.Outlet[{n}].PeakFactor",
+            "phase_id": "PDU.OutletSystem.Outlet[{n}].PhaseID",
+            "pole_id": "PDU.OutletSystem.Outlet[{n}].PoleID",
+            "power_factor": "PDU.OutletSystem.Outlet[{n}].PowerFactor",
+            "switchable": "PDU.OutletSystem.Outlet[{n}].Switchable",
+            "designator": "PDU.OutletSystem.Outlet[{n}].iDesignator",
+            "name": "PDU.OutletSystem.Outlet[{n}].iName",
+            "outlet_id": "PDU.OutletSystem.Outlet[{n}].OutletID",
+            "energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy",
+            "reset_time": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetTime",
+            "reset_energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetEnergy",
+            "auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart",
+        }
+        self.get_device_commands = {
+            "model": "PDU.PowerSummary.iPartNumber",
+            "version": "PDU.PowerSummary.iVersion",
+            "manufacturer": "PDU.PowerSummary.iManufacturer",
+            "serial_number": "PDU.PowerSummary.iSerialNumber",
+            "outlet_count": "PDU.OutletSystem.Outlet.Count",
+        }
         # Command templates for outlet items (override per firmware). {n} is 1-based
         self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
         self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
@@ -120,7 +157,8 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_auto_restart: str = "get PDU.OutletSystem.Outlet[{n}].AutomaticRestart"
         self.cmd_set_auto_restart: str = "set PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}"
         # Command templates for device items.
-        self.cmd_device_model: str = "get PDU.PowerSummary.iManufacturer"
+        self.cmd_device_manufacturer: str = "get PDU.PowerSummary.iManufacturer"
+        self.cmd_device_model: str = "get PDU.PowerSummary.iPartNumber"
         self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
         self.cmd_outlet_count: str = "get PDU.OutletSystem.Outlet.Count"
 
@@ -313,8 +351,9 @@ class EatonEMAT(HardwareDeviceBase):
         NOTE: n can be replaced with "x" to retrieve item values for all outlets
         """
         mapping_device = {
+            "manufacturer": self.cmd_device_manufacturer,
             "model": self.cmd_device_model,
-            "firmware": self.cmd_firmware_ver,
+            "version": self.cmd_firmware_ver,
             "outlet_count": self.cmd_outlet_count
         }
         mapping_outlets = {
@@ -446,8 +485,9 @@ class EatonEMAT(HardwareDeviceBase):
             self.logger.error("Device not connected")
             return False
         self.outlet_count = int(self.get_atomic_value("outlet_count"))
+        self.manufacturer = self.get_atomic_value("manufacturer")
         self.model = self.get_atomic_value("model")
-        self.firmware = self.get_atomic_value("firmware")
+        self.version = self.get_atomic_value("version")
         names = self.get_atomic_value("name", "x")
         for name in names.split("|"):
             self.outlet_names.append(name)
