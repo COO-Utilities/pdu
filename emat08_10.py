@@ -342,6 +342,43 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
+    def get_item(self, item: str, n:Union[int, str]) -> Union[str, None]:
+        """ Retrieve atomic values
+
+                :param item: String item to retrieve
+                :param n: Outlet to retrieve item for (required for outlet items, not required for
+                            device items.
+
+                NOTE: n can be replaced with "x" to retrieve item values for all outlets
+                """
+        if item in self.get_outlet_commands:
+            if not self.initialized:
+                self.logger.error("Device is not initialized")
+                return None
+            if n < 1 or n > self.outlet_count:
+                self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+                return None
+            cmd = "get " + self.get_outlet_commands[item].format(n=n)
+
+        elif item in self.get_device_commands:
+            cmd = "get " + self.get_device_commands[item]
+
+        elif "help" in item:
+            print("Device items (no outlet number required:")
+            for k in self.get_device_commands:
+                print(k)
+            print("Outlet items (outlet number or x required):")
+            for k in self.get_outlet_commands:
+                print(k)
+            return None
+
+        else:
+            self.logger.error("Item not found: %s", item)
+            return None
+        if not self._send_command(cmd):
+            return None
+        return self._read_reply()
+
     def get_atomic_value(self, item: str, n:Union[int, str] = None) -> Union[str, None]:
         """ Retrieve atomic values
 
