@@ -342,7 +342,7 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_item(self, item: str, n:Union[int, str]=None) -> Union[str, None]:
+    def get_atomic_value(self, item: str, n:Union[int, str]=None) -> Union[str, None]:
         """ Retrieve atomic values
 
                 :param item: String item to retrieve
@@ -351,17 +351,21 @@ class EatonEMAT(HardwareDeviceBase):
 
                 NOTE: n can be replaced with "x" to retrieve item values for all outlets
                 """
+        # pylint: disable=too-many-branches,too-many-return-statements
         if item in self.get_outlet_commands:
-            if not self.initialized:
-                self.logger.error("Device is not initialized")
+            if n is None:
+                self.logger.error("Outlet index (n) must be an integer or string x")
                 return None
             if isinstance(n, int):
+                if not self.initialized:
+                    self.logger.error("Device is not initialized")
+                    return None
                 if n < 1 or n > self.outlet_count:
                     self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
                     return None
             if isinstance(n, str):
                 if n != "x":
-                    self.logger.error("Outlet index must be an integer or string x")
+                    self.logger.error("Outlet index (n) must be an integer or string x")
                     return None
             cmd = "get " + self.get_outlet_commands[item].format(n=n)
 
@@ -380,83 +384,10 @@ class EatonEMAT(HardwareDeviceBase):
         else:
             self.logger.error("Item not found: %s", item)
             return None
+
         if not self._send_command(cmd):
             return None
-        return self._read_reply()
 
-    def get_atomic_value(self, item: str, n:Union[int, str] = None) -> Union[str, None]:
-        """ Retrieve atomic values
-
-        :param item: String item to retrieve
-        :param n: Outlet to retrieve item for (required for outlet items, not required for
-                    device items).
-
-        NOTE: n can be replaced with "x" to retrieve item values for all outlets
-        """
-        mapping_device = {
-            "manufacturer": self.cmd_device_manufacturer,
-            "model": self.cmd_device_model,
-            "version": self.cmd_firmware_ver,
-            "serial": self.cmd_serial_number,
-            "outlet_count": self.cmd_outlet_count
-        }
-        mapping_outlets = {
-            "status": self.cmd_outlet_status.format(n=n),
-            "overcurrent_status": self.cmd_overcurrent_status.format(n=n),
-            "current": self.cmd_current.format(n=n),
-            "energy": self.cmd_energy.format(n=n),
-            "apparent_power": self.cmd_apparent_power.format(n=n),
-            "active_power": self.cmd_active_power.format(n=n),
-            "reactive_power": self.cmd_reactive_power.format(n=n),
-            "config_current": self.cmd_config_current.format(n=n),
-            "type": self.cmd_type.format(n=n),
-            "peak_factor": self.cmd_peak_factor.format(n=n),
-            "phase_id": self.cmd_phase_id.format(n=n),
-            "pole_id": self.cmd_pole_id.format(n=n),
-            "power_factor": self.cmd_power_factor.format(n=n),
-            "switchable": self.cmd_switchable.format(n=n),
-            "designator": self.cmd_designator.format(n=n),
-            "name": self.cmd_name.format(n=n),
-            "outlet_id": self.cmd_outlet_id.format(n=n),
-            "reset_time": self.cmd_reset_time.format(n=n),
-            "reset_energy": self.cmd_reset_energy.format(n=n),
-            "auto_restart": self.cmd_auto_restart.format(n=n)
-        }
-
-        if "help" in item:
-            print("Device items (no outlet number required:")
-            for k in mapping_device:
-                print(k)
-            print("Outlet items (outlet number or x required):")
-            for k in mapping_outlets:
-                print(k)
-            return None
-
-        if item not in mapping_outlets and item not in mapping_device:
-            self.logger.error("Unsupported item: %s", item)
-            return None
-
-        if item in mapping_device:
-            cmd = mapping_device.get(item.lower())
-        else:
-            if isinstance(n, int):
-                if not self.initialized:
-                    self.logger.error("Device is not initialized")
-                    return None
-                if n < 1 or n > self.outlet_count:
-                    self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
-                    return None
-            else:
-                if isinstance(n, str):
-                    if n != "x":
-                        self.logger.error("Outlet index must be an integer or string x")
-                        return None
-            cmd = mapping_outlets.get(item.lower())
-        if not cmd:
-            self.logger.error("Unsupported item: %s", item)
-            return None
-        if not self._send_command(cmd):
-            return None
         return self._read_reply()
 
     def outlet_on(self, n: int) -> bool:
