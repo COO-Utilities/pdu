@@ -463,11 +463,11 @@ class EatonEMAT(HardwareDeviceBase):
         self.manufacturer = self.get_atomic_value("manufacturer")
         self.model = self.get_atomic_value("model")
         self.version = self.get_atomic_value("version")
-        self.serial = self.get_atomic_value("serial")
+        self.serial = self.get_atomic_value("serial_number")
         names = self.get_atomic_value("name", "x")
         for name in names.split("|"):
             self.outlet_names.append(name)
-        statuses = self.get_atomic_value("status", "x")
+        statuses = self.get_atomic_value("outlet_status", "x")
         for status in statuses.split("|"):
             self.outlet_onoff.append(int(status))
         self.initialized = True
