@@ -355,16 +355,21 @@ class EatonEMAT(HardwareDeviceBase):
             if not self.initialized:
                 self.logger.error("Device is not initialized")
                 return None
-            if n < 1 or n > self.outlet_count:
-                self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
-                return None
+            if isinstance(n, int):
+                if n < 1 or n > self.outlet_count:
+                    self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+                    return None
+            if isinstance(n, str):
+                if n != "x":
+                    self.logger.error("Outlet index must be an integer or string x")
+                    return None
             cmd = "get " + self.get_outlet_commands[item].format(n=n)
 
         elif item in self.get_device_commands:
             cmd = "get " + self.get_device_commands[item]
 
         elif "help" in item:
-            print("Device items (no outlet number required:")
+            print("Device items (no outlet number required):")
             for k in self.get_device_commands:
                 print(k)
             print("Outlet items (outlet number or x required):")
