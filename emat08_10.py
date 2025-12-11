@@ -161,6 +161,7 @@ class EatonEMAT(HardwareDeviceBase):
         self.cmd_device_model: str = "get PDU.PowerSummary.iPartNumber"
         self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
         self.cmd_outlet_count: str = "get PDU.OutletSystem.Outlet.Count"
+        self.cmd_serial_number: str = "get PDU.PowerSummary.iSerialNumber"
 
 
         # Optional login prompt substrings
@@ -354,6 +355,7 @@ class EatonEMAT(HardwareDeviceBase):
             "manufacturer": self.cmd_device_manufacturer,
             "model": self.cmd_device_model,
             "version": self.cmd_firmware_ver,
+            "serial": self.cmd_serial_number,
             "outlet_count": self.cmd_outlet_count
         }
         mapping_outlets = {
@@ -488,6 +490,7 @@ class EatonEMAT(HardwareDeviceBase):
         self.manufacturer = self.get_atomic_value("manufacturer")
         self.model = self.get_atomic_value("model")
         self.version = self.get_atomic_value("version")
+        self.serial = self.get_atomic_value("serial")
         names = self.get_atomic_value("name", "x")
         for name in names.split("|"):
             self.outlet_names.append(name)
