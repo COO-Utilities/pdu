@@ -342,12 +342,12 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_item(self, item: str, n:Union[int, str]) -> Union[str, None]:
+    def get_item(self, item: str, n:Union[int, str]=None) -> Union[str, None]:
         """ Retrieve atomic values
 
                 :param item: String item to retrieve
                 :param n: Outlet to retrieve item for (required for outlet items, not required for
-                            device items.
+                            device items).
 
                 NOTE: n can be replaced with "x" to retrieve item values for all outlets
                 """
@@ -384,7 +384,7 @@ class EatonEMAT(HardwareDeviceBase):
 
         :param item: String item to retrieve
         :param n: Outlet to retrieve item for (required for outlet items, not required for
-                    device items.
+                    device items).
 
         NOTE: n can be replaced with "x" to retrieve item values for all outlets
         """
