@@ -345,7 +345,7 @@ class EatonEMAT(HardwareDeviceBase):
             print("Device items (no outlet number required):")
             for k in self.get_device_commands:
                 print(k)
-            print("Outlet items (outlet number or x required):")
+            print("\nOutlet items (outlet number or x required):")
             for k in self.get_outlet_commands:
                 print(k)
             return None
