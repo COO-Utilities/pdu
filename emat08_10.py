@@ -70,52 +70,68 @@ class EatonEMAT(HardwareDeviceBase):
         # Buffer for last command’s reply
         self._last_reply: Optional[str] = None
 
-        # Command templates for outlet items (override per firmware). {n} is 1-based
-        self.cmd_outlet_on: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0"
-        self.cmd_outlet_off: str = "set PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0"
-        # SwitchOnOff: 0 - Off, 1 - On
-        self.cmd_outlet_status: str = "get PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff"
-        # OverCurrent: 0 - Normal, 1 - Low warn, 2 - Low critical, 3 - High warn, 4 - High critical
-        self.cmd_overcurrent_status: str = \
-            "get PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent"
-        # ActivePower, ApparentPower, ReactivePower: Watts
-        self.cmd_active_power: str = "get PDU.OutletSystem.Outlet[{n}].ActivePower"
-        self.cmd_apparent_power: str = "get PDU.OutletSystem.Outlet[{n}].ApparentPower"
-        self.cmd_reactive_power: str = "get PDU.OutletSystem.Outlet[{n}].ReactivePower"
-        # ConfigCurrent, Current: Amps
-        self.cmd_config_current: str = "get PDU.OutletSystem.Outlet[{n}].ConfigCurrent"
-        self.cmd_current: str = "get PDU.OutletSystem.Outlet[{n}].Current"
-        # Type: 0..255
-        self.cmd_type: str = "get PDU.OutletSystem.Outlet[{n}].Type"
-        #
-        self.cmd_peak_factor: str = "get PDU.OutletSystem.Outlet[{n}].PeakFactor"
-        self.cmd_phase_id: str = "get PDU.OutletSystem.Outlet[{n}].PhaseID"
-        self.cmd_pole_id: str = "get PDU.OutletSystem.Outlet[{n}].PoleID"
-        self.cmd_power_factor: str = "get PDU.OutletSystem.Outlet[{n}].PowerFactor"
-        # Switchable: 0 - Disabled, 1 - Enabled
-        self.cmd_switchable: str = "get PDU.OutletSystem.Outlet[{n}].Switchable"
-        # iDesignator, iName: <string>
-        self.cmd_designator: str = "get PDU.OutletSystem.Outlet[{n}].iDesignator"
-        self.cmd_name: str = "get PDU.OutletSystem.Outlet[{n}].iName"
-        # OutletID: <int>
-        self.cmd_outlet_id: str = "get PDU.OutletSystem.Outlet[{n}].OutletID"
-        # Energy: Watt-hours
-        self.cmd_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy"
-        # ModuleReset: reset statistics for outlet
-        self.cmd_reset_statistics: str = \
-            "set PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1"
-        # Reset.Time: Unix sec of last reset
-        self.cmd_reset_time: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Time"
-        # Reset.Energy: Energy at last reset
-        self.cmd_reset_energy: str = "get PDU.OutletSystem.Outlet[{n}].Statistic[5].Reset.Energy"
-        # AutomaticRestart: 0 - not powered, 1 - powered, 2 - last state at startup
-        self.cmd_auto_restart: str = "get PDU.OutletSystem.Outlet[{n}].AutomaticRestart"
-        self.cmd_set_auto_restart: str = "set PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}"
-        # Command templates for device items.
-        self.cmd_device_model: str = "get PDU.PowerSummary.iManufacturer"
-        self.cmd_firmware_ver: str = "get PDU.PowerSummary.iVersion"
-        self.cmd_outlet_count: str = "get PDU.OutletSystem.Outlet.Count"
+        # Device properties
+        self.outlet_count: int = 0
+        self.outlet_names: List[str] = []
+        self.outlet_onoff: List[int] = []
+        self.manufacturer: str = ""
+        self.model: str = ""
+        self.version: str = ""
+        self.serial: str = ""
+        self.initialized = False
 
+        self.set_commands = {
+            "outlet_on": "PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0",
+            "outlet_off": "PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0",
+            # ModuleReset: reset statistics for outlet
+            "reset_statistics": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1",
+            # AutomaticRestart, p: 0 - not powered, 1 - powered, 2 - last state at startup
+            "set_auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}"
+        }
+        # GET Command templates for outlet items (override per firmware). {n} is 1-based
+        self.get_outlet_commands = {
+            # SwitchOnOff: 0 - Off, 1 - On
+            "outlet_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff",
+            # OverCurrent: 0 - Normal, 1 - Low warning, 2 - Low critical,
+            #              3 - High warning, 4 - High critical
+            "overcurrent_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent",
+            # ActivePower, ApparentPower, ReactivePower: Watts
+            "active_power": "PDU.OutletSystem.Outlet[{n}].ActivePower",
+            "apparent_power": "PDU.OutletSystem.Outlet[{n}].ApparentPower",
+            "reactive_power": "PDU.OutletSystem.Outlet[{n}].ReactivePower",
+            # ConfigCurrent, Current: Amps
+            "config_current": "PDU.OutletSystem.Outlet[{n}].ConfigCurrent",
+            "current": "PDU.OutletSystem.Outlet[{n}].Current",
+            # Type: 0..255
+            "type": "PDU.OutletSystem.Outlet[{n}].Type",
+            "peak_factor": "PDU.OutletSystem.Outlet[{n}].PeakFactor",
+            "phase_id": "PDU.OutletSystem.Outlet[{n}].PhaseID",
+            "pole_id": "PDU.OutletSystem.Outlet[{n}].PoleID",
+            "power_factor": "PDU.OutletSystem.Outlet[{n}].PowerFactor",
+            # Switchable: 0 - Disabled, 1 - Enabled
+            "switchable": "PDU.OutletSystem.Outlet[{n}].Switchable",
+            # iDesignator, iName: <string>
+            "designator": "PDU.OutletSystem.Outlet[{n}].iDesignator",
+            "name": "PDU.OutletSystem.Outlet[{n}].iName",
+            # OutletID: <int>
+            "outlet_id": "PDU.OutletSystem.Outlet[{n}].OutletID",
+            # Energy: Watt-hours
+            "energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy",
+            # Reset.Time: Unix sec of last reset
+            "reset_time": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetTime",
+            # Reset.Energy: Energy at last reset
+            "reset_energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetEnergy",
+            # AutomaticRestart: 0 - not powered, 1 - powered, 2 - last state at startup
+            "auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart",
+        }
+        # Command templates for device items.
+        self.get_device_commands = {
+            "model": "PDU.PowerSummary.iPartNumber",
+            "version": "PDU.PowerSummary.iVersion",
+            "manufacturer": "PDU.PowerSummary.iManufacturer",
+            "serial_number": "PDU.PowerSummary.iSerialNumber",
+            "outlet_count": "PDU.OutletSystem.Outlet.Count",
+        }
 
         # Optional login prompt substrings
         self._login_user_prompts: List[str] = ["login:", "username:", "user:"]
@@ -283,7 +299,7 @@ class EatonEMAT(HardwareDeviceBase):
         # read until prompt, strip trailing prompt, return text
         data = await self._read_until_prompt()
         self.logger.debug("Received data: %s", data)
-        retval = data.split()[-3]
+        retval = data.split(self._eol)[-2].split('\r')[0]
         return retval
 
     def _read_reply(self) -> Union[str, None]:
@@ -295,102 +311,141 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_atomic_value(self, item: str, n:int = None) -> Union[str, None]:
-        """ Retrieve atomic values """
-        mapping_device = {
-            "model": self.cmd_device_model,
-            "firmware": self.cmd_firmware_ver,
-            "outlet_count": self.cmd_outlet_count
-        }
-        mapping_outlets = {
-            "status": self.cmd_outlet_status.format(n=n),
-            "overcurrent_status": self.cmd_overcurrent_status.format(n=n),
-            "current": self.cmd_current.format(n=n),
-            "energy": self.cmd_energy.format(n=n),
-            "apparent_power": self.cmd_apparent_power.format(n=n),
-            "active_power": self.cmd_active_power.format(n=n),
-            "reactive_power": self.cmd_reactive_power.format(n=n),
-            "config_current": self.cmd_config_current.format(n=n),
-            "type": self.cmd_type.format(n=n),
-            "peak_factor": self.cmd_peak_factor.format(n=n),
-            "phase_id": self.cmd_phase_id.format(n=n),
-            "pole_id": self.cmd_pole_id.format(n=n),
-            "power_factor": self.cmd_power_factor.format(n=n),
-            "switchable": self.cmd_switchable.format(n=n),
-            "designator": self.cmd_designator.format(n=n),
-            "name": self.cmd_name.format(n=n),
-            "outlet_id": self.cmd_outlet_id.format(n=n),
-            "reset_time": self.cmd_reset_time.format(n=n),
-            "reset_energy": self.cmd_reset_energy.format(n=n),
-            "auto_restart": self.cmd_auto_restart.format(n=n)
-        }
+    def get_atomic_value(self, item: str, n:Union[int, str]=None) -> Union[str, None]:
+        """ Retrieve atomic values
 
-        if "help" in item:
-            print("Device items (no outlet number required:")
-            for k in mapping_device:
+                :param item: String item to retrieve
+                :param n: Outlet to retrieve item for (required for outlet items, not required for
+                            device items).
+
+                NOTE: n can be replaced with "x" to retrieve item values for all outlets
+                """
+        # pylint: disable=too-many-branches,too-many-return-statements
+        if item in self.get_outlet_commands:
+            if n is None:
+                self.logger.error("Outlet index (n) must be an integer or string x")
+                return None
+            if isinstance(n, int):
+                if not self.initialized:
+                    self.logger.error("Device is not initialized")
+                    return None
+                if n < 1 or n > self.outlet_count:
+                    self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+                    return None
+            if isinstance(n, str):
+                if n != "x":
+                    self.logger.error("Outlet index (n) must be an integer or string x")
+                    return None
+            cmd = "get " + self.get_outlet_commands[item].format(n=n)
+
+        elif item in self.get_device_commands:
+            cmd = "get " + self.get_device_commands[item]
+
+        elif "help" in item:
+            print("Device items (no outlet number required):")
+            for k in self.get_device_commands:
                 print(k)
-            print("Outlet items (outlet number required):")
-            for k in mapping_outlets:
+            print("\nOutlet items (outlet number or x required):")
+            for k in self.get_outlet_commands:
                 print(k)
             return None
 
-        if item not in mapping_outlets and item not in mapping_device:
-            self.logger.error("Unsupported item: %s", item)
-            return None
-
-        if item in mapping_device:
-            cmd = mapping_device.get(item.lower())
         else:
-            cmd = mapping_outlets.get(item.lower())
-        if not cmd:
-            self.logger.error("Unsupported item: %s", item)
+            self.logger.error("Item not found: %s", item)
             return None
+
         if not self._send_command(cmd):
             return None
+
         return self._read_reply()
 
     def outlet_on(self, n: int) -> bool:
         """ Turn specified outlet on. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
             return False
-        return self._send_command(self.cmd_outlet_on.format(n=n))
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            return False
+        cmd = "set " + self.set_commands["outlet_on"].format(n=n)
+        if self._send_command(cmd):
+            self.outlet_onoff[n-1] = 1
+            return True
+        return False
 
     def outlet_off(self, n: int) -> bool:
         """ Turn specified outlet off. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
             return False
-        return self._send_command(self.cmd_outlet_off.format(n=n))
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            return False
+        cmd = "set " + self.set_commands["outlet_off"].format(n=n)
+        if self._send_command(cmd):
+            self.outlet_onoff[n-1] = 0
+            return True
+        return False
 
     def outlet_status(self, n: int) -> Optional[str]:
         """ Get outlet status. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
             return None
-        if not self._send_command(self.cmd_outlet_status.format(n=n)):
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            return None
+        cmd = "get " + self.get_outlet_commands["outlet_status"].format(n=n)
+        if not self._send_command(cmd):
             return None
         return self._read_reply()
 
     def reset_statistics(self, n:int) -> bool:
         """ Reset energy statistics for given outlet. """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
             return False
-        return self._send_command(self.cmd_reset_statistics.format(n=n))
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            return False
+        cmd = "set " + self.set_commands["reset_statistics"].format(n=n)
+        return self._send_command(cmd)
 
     def set_autostart(self, n: int, p: int) -> bool:
         """ Set autostart status for given outlet.
         n - outlet number (1-8)
         p - state: 0 - not powered at startup, 1 - powered at startup, 2 - last state at startup
         """
-        if n < 1:
-            self.logger.error("Outlet index must be >= 1")
+        if not self.initialized:
+            self.logger.error("Device is not initialized")
+            return False
+        if n < 1 or n > self.outlet_count:
+            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
             return False
         if p < 0 or p > 2:
             self.logger.error("Outlet autostart status must be between 0 and 2")
             return False
-        return self._send_command(self.cmd_set_auto_restart.format(n=n, p=p))
+        cmd = "set " + self.set_commands["set_autostart"].format(n=n, p=p)
+        return self._send_command(cmd)
+
+    def initialize(self) -> bool:
+        """ Initialize device properties. """
+        if not self.is_connected():
+            self.logger.error("Device not connected")
+            return False
+        self.outlet_count = int(self.get_atomic_value("outlet_count"))
+        self.manufacturer = self.get_atomic_value("manufacturer")
+        self.model = self.get_atomic_value("model")
+        self.version = self.get_atomic_value("version")
+        self.serial = self.get_atomic_value("serial_number")
+        names = self.get_atomic_value("name", "x")
+        for name in names.split("|"):
+            self.outlet_names.append(name)
+        statuses = self.get_atomic_value("outlet_status", "x")
+        for status in statuses.split("|"):
+            self.outlet_onoff.append(int(status))
+        self.initialized = True
+        return True
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
         """Wait for any of the prompt substrings, then write the string."""
