@@ -185,10 +185,10 @@ class EatonEMAT(HardwareDeviceBase):
             ok = self._reader is not None and self._writer is not None
             self._set_connected(ok)
             if ok:
-                self.logger.info("Connected (telnetlib3) to %s:%d", host, port)
+                self.report_info(f"Connected (telnetlib3) to {host}:{port}")
             return ok
         except Exception as e:
-            self.logger.error("Telnet connection error: %s", str(e))
+            self.report_error(f"Telnet connection error: {e}")
             self._reader = None
             self._writer = None
             self._set_connected(False)
@@ -248,7 +248,7 @@ class EatonEMAT(HardwareDeviceBase):
                     pass
             self._loop = None
             self._loop_thread = None
-            self.logger.info("Disconnected")
+            self.report_info("Disconnected")
 
     async def _adisconnect(self) -> None:
         if self._writer is not None:
@@ -270,7 +270,7 @@ class EatonEMAT(HardwareDeviceBase):
         Send a command and buffer the reply (stdout-like text).
         """
         if not self.is_connected() or self._writer is None:
-            self.logger.error("Device is not connected")
+            self.report_error("Device is not connected")
             return False
 
         # Support positional formatting like cmd.format(n=3) OR cmd.format(3)
@@ -284,10 +284,10 @@ class EatonEMAT(HardwareDeviceBase):
             with self.lock:
                 reply = self._run(self._asend_and_read(command))
                 self._last_reply = reply
-            self.logger.debug("Executed command: %s", command)
+            self.report_debug(f"Executed command: {command}")
             return True
         except Exception as e:
-            self.logger.error("Telnet exec failed: %s", str(e))
+            self.report_error(f"Telnet exec failed: {e}")
             self._last_reply = None
             return False
 
@@ -298,7 +298,7 @@ class EatonEMAT(HardwareDeviceBase):
         await self._writer.drain()
         # read until prompt, strip trailing prompt, return text
         data = await self._read_until_prompt()
-        self.logger.debug("Received data: %s", data)
+        self.report_debug(f"Received data: {data}")
         retval = data.split(self._eol)[-2].split('\r')[0]
         return retval
 
@@ -307,7 +307,7 @@ class EatonEMAT(HardwareDeviceBase):
         Return the buffered reply from the last `_send_command()`.
         """
         if not self.is_connected():
-            self.logger.error("Device is not connected")
+            self.report_error("Device is not connected")
             return None
         return self._last_reply if self._last_reply is not None else ""
 
@@ -323,18 +323,18 @@ class EatonEMAT(HardwareDeviceBase):
         # pylint: disable=too-many-branches,too-many-return-statements
         if item in self.get_outlet_commands:
             if n is None:
-                self.logger.error("Outlet index (n) must be an integer or string x")
+                self.report_error("Outlet index (n) must be an integer or string x")
                 return None
             if isinstance(n, int):
                 if not self.initialized:
-                    self.logger.error("Device is not initialized")
+                    self.report_error("Device is not initialized")
                     return None
                 if n < 1 or n > self.outlet_count:
-                    self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+                    self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
                     return None
             if isinstance(n, str):
                 if n != "x":
-                    self.logger.error("Outlet index (n) must be an integer or string x")
+                    self.report_error("Outlet index (n) must be an integer or string x")
                     return None
             cmd = "get " + self.get_outlet_commands[item].format(n=n)
 
@@ -351,7 +351,7 @@ class EatonEMAT(HardwareDeviceBase):
             return None
 
         else:
-            self.logger.error("Item not found: %s", item)
+            self.report_error(f"Item not found: {item}")
             return None
 
         if not self._send_command(cmd):
@@ -362,10 +362,10 @@ class EatonEMAT(HardwareDeviceBase):
     def outlet_on(self, n: int) -> bool:
         """ Turn specified outlet on. """
         if not self.initialized:
-            self.logger.error("Device is not initialized")
+            self.report_error("Device is not initialized")
             return False
         if n < 1 or n > self.outlet_count:
-            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
             return False
         cmd = "set " + self.set_commands["outlet_on"].format(n=n)
         if self._send_command(cmd):
@@ -376,10 +376,10 @@ class EatonEMAT(HardwareDeviceBase):
     def outlet_off(self, n: int) -> bool:
         """ Turn specified outlet off. """
         if not self.initialized:
-            self.logger.error("Device is not initialized")
+            self.report_error("Device is not initialized")
             return False
         if n < 1 or n > self.outlet_count:
-            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
             return False
         cmd = "set " + self.set_commands["outlet_off"].format(n=n)
         if self._send_command(cmd):
@@ -390,10 +390,10 @@ class EatonEMAT(HardwareDeviceBase):
     def outlet_status(self, n: int) -> Optional[str]:
         """ Get outlet status. """
         if not self.initialized:
-            self.logger.error("Device is not initialized")
+            self.report_error("Device is not initialized")
             return None
         if n < 1 or n > self.outlet_count:
-            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
             return None
         cmd = "get " + self.get_outlet_commands["outlet_status"].format(n=n)
         if not self._send_command(cmd):
@@ -403,10 +403,10 @@ class EatonEMAT(HardwareDeviceBase):
     def reset_statistics(self, n:int) -> bool:
         """ Reset energy statistics for given outlet. """
         if not self.initialized:
-            self.logger.error("Device is not initialized")
+            self.report_error("Device is not initialized")
             return False
         if n < 1 or n > self.outlet_count:
-            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
             return False
         cmd = "set " + self.set_commands["reset_statistics"].format(n=n)
         return self._send_command(cmd)
@@ -417,13 +417,13 @@ class EatonEMAT(HardwareDeviceBase):
         p - state: 0 - not powered at startup, 1 - powered at startup, 2 - last state at startup
         """
         if not self.initialized:
-            self.logger.error("Device is not initialized")
+            self.report_error("Device is not initialized")
             return False
         if n < 1 or n > self.outlet_count:
-            self.logger.error("Outlet index must be >= 1 or <= %d", self.outlet_count)
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
             return False
         if p < 0 or p > 2:
-            self.logger.error("Outlet autostart status must be between 0 and 2")
+            self.report_error("Outlet autostart status must be between 0 and 2")
             return False
         cmd = "set " + self.set_commands["set_autostart"].format(n=n, p=p)
         return self._send_command(cmd)
@@ -431,7 +431,7 @@ class EatonEMAT(HardwareDeviceBase):
     def initialize(self) -> bool:
         """ Initialize device properties. """
         if not self.is_connected():
-            self.logger.error("Device not connected")
+            self.report_error("Device not connected")
             return False
         self.outlet_count = int(self.get_atomic_value("outlet_count"))
         self.manufacturer = self.get_atomic_value("manufacturer")
