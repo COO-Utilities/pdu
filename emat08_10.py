@@ -78,7 +78,6 @@ class EatonEMAT(HardwareDeviceBase):
         self.model: str = ""
         self.version: str = ""
         self.serial: str = ""
-        self.initialized = False
 
         self.set_commands = {
             "outlet_on": "PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0",
