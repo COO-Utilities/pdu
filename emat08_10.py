@@ -85,7 +85,9 @@ class EatonEMAT(HardwareDeviceBase):
             # ModuleReset: reset statistics for outlet
             "reset_statistics": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1",
             # AutomaticRestart, p: 0 - not powered, 1 - powered, 2 - last state at startup
-            "set_auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}"
+            "set_auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}",
+            # iName: name for outlet
+            "outlet_name": "PDU.OutletSystem.Outlet[{n}].iName {name}"
         }
         # GET Command templates for outlet items (override per firmware). {n} is 1-based
         self.get_outlet_commands = {
@@ -425,6 +427,23 @@ class EatonEMAT(HardwareDeviceBase):
             self.report_error("Outlet autostart status must be between 0 and 2")
             return False
         cmd = "set " + self.set_commands["set_autostart"].format(n=n, p=p)
+        return self._send_command(cmd)
+
+    def set_outlet_name(self, n:int, name: str) -> bool:
+        """ Set name for given outlet.
+         n - outlet number (1-8)
+         name - name of outlet
+         """
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return False
+        if n < 1 or n > self.outlet_count:
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
+            return False
+        if not name:
+            self.report_error("Outlet name cannot be empty")
+            return False
+        cmd = "set " + self.set_commands["set_outlet_name"].format(n=n, name=name)
         return self._send_command(cmd)
 
     def initialize(self) -> bool:
