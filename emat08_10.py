@@ -96,38 +96,40 @@ class EatonEMAT(HardwareDeviceBase):
         # GET Command templates for outlet items (override per firmware). {n} is 1-based
         self.get_outlet_commands = {
             # SwitchOnOff: 0 - Off, 1 - On
-            "outlet_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff",
+            "outlet_status": ("PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff",
+                              "bool"),
             # OverCurrent: 0 - Normal, 1 - Low warning, 2 - Low critical,
             #              3 - High warning, 4 - High critical
-            "overcurrent_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent",
+            "overcurrent_status": ("PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent",
+                                   "int"),
             # ActivePower, ApparentPower, ReactivePower: Watts
-            "active_power": "PDU.OutletSystem.Outlet[{n}].ActivePower",
-            "apparent_power": "PDU.OutletSystem.Outlet[{n}].ApparentPower",
-            "reactive_power": "PDU.OutletSystem.Outlet[{n}].ReactivePower",
+            "active_power": ("PDU.OutletSystem.Outlet[{n}].ActivePower", "float"),
+            "apparent_power": ("PDU.OutletSystem.Outlet[{n}].ApparentPower", "float"),
+            "reactive_power": ("PDU.OutletSystem.Outlet[{n}].ReactivePower", "float"),
             # ConfigCurrent, Current: Amps
-            "config_current": "PDU.OutletSystem.Outlet[{n}].ConfigCurrent",
-            "current": "PDU.OutletSystem.Outlet[{n}].Current",
+            "config_current": ("PDU.OutletSystem.Outlet[{n}].ConfigCurrent", "float"),
+            "current": ("PDU.OutletSystem.Outlet[{n}].Current", "float"),
             # Type: 0..255
-            "type": "PDU.OutletSystem.Outlet[{n}].Type",
-            "peak_factor": "PDU.OutletSystem.Outlet[{n}].PeakFactor",
-            "phase_id": "PDU.OutletSystem.Outlet[{n}].PhaseID",
-            "pole_id": "PDU.OutletSystem.Outlet[{n}].PoleID",
-            "power_factor": "PDU.OutletSystem.Outlet[{n}].PowerFactor",
+            "type": ("PDU.OutletSystem.Outlet[{n}].Type", "int"),
+            "peak_factor": ("PDU.OutletSystem.Outlet[{n}].PeakFactor", "float"),
+            "phase_id": ("PDU.OutletSystem.Outlet[{n}].PhaseID", "int"),
+            "pole_id": ("PDU.OutletSystem.Outlet[{n}].PoleID", "int"),
+            "power_factor": ("PDU.OutletSystem.Outlet[{n}].PowerFactor", "float"),
             # Switchable: 0 - Disabled, 1 - Enabled
-            "switchable": "PDU.OutletSystem.Outlet[{n}].Switchable",
+            "switchable": ("PDU.OutletSystem.Outlet[{n}].Switchable", "bool"),
             # iDesignator, iName: <string>
-            "designator": "PDU.OutletSystem.Outlet[{n}].iDesignator",
-            "name": "PDU.OutletSystem.Outlet[{n}].iName",
+            "designator": ("PDU.OutletSystem.Outlet[{n}].iDesignator", "str"),
+            "name": ("PDU.OutletSystem.Outlet[{n}].iName", "str"),
             # OutletID: <int>
-            "outlet_id": "PDU.OutletSystem.Outlet[{n}].OutletID",
+            "outlet_id": ("PDU.OutletSystem.Outlet[{n}].OutletID", "int"),
             # Energy: Watt-hours
-            "energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy",
+            "energy": ("PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy", "int"),
             # Reset.Time: Unix sec of last reset
-            "reset_time": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetTime",
+            "reset_time": ("PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetTime", "float"),
             # Reset.Energy: Energy at last reset
-            "reset_energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetEnergy",
+            "reset_energy": ("PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetEnergy", "int"),
             # AutomaticRestart: 0 - not powered, 1 - powered, 2 - last state at startup
-            "auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart",
+            "auto_restart": ("PDU.OutletSystem.Outlet[{n}].AutomaticRestart", "int")
         }
         # Command templates for device items.
         self.get_device_commands = {
@@ -316,15 +318,27 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_atomic_value(self, item: str) -> Union[str, None]:
+    def get_all_values(self, item: str) -> Union[str, None]:
+        """ Retrieve all outlet values
+            :param item: String item to retrieve (no outlet number required).
+        """
+        # must be initialized to get outlet values
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return None
+        if item in self.get_outlet_commands:
+            cmd = "get " + self.get_outlet_commands[item][0].format(n="x")
+            if not self._send_command(cmd):
+                return None
+            return self._read_reply()
+        self.report_error(f"Not an outlet item: {item}")
+        return None
+
+    def get_atomic_value(self, item: str) -> None | str | int | float | bool:
         """ Retrieve atomic values
 
-                :param item: String item to retrieve with outlet number appended.
-                :param n: Outlet to retrieve item for (required for outlet items, not required for
-                            device items).
-
-                NOTE: n can be replaced with "x" to retrieve item values for all outlets
-                """
+            :param item: String item to retrieve with outlet number appended.
+            """
         # pylint: disable=too-many-branches,too-many-return-statements
 
         if "help" in item:
@@ -333,39 +347,60 @@ class EatonEMAT(HardwareDeviceBase):
                 print(k)
             print("\nOutlet items (append outlet number or leave off for all outlets):")
             for k in self.get_outlet_commands:
-                print(k)
+                print(k[0])
             return None
 
         if item in self.get_device_commands:
             cmd = "get " + self.get_device_commands[item]
-
-        else:
-            intup = trailing_int(item)
-            # get values for all outlets
-            if intup is None:
-                n = "x"
-            # get value for specific outlet
-            else:
-                n = intup[1]
-                item = intup[0]
-                # check outlet number
-                if n < 1 or n > self.outlet_count:
-                    self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
-                    return None
-            if item in self.get_outlet_commands:
-                # must be initialized to get outlet values
-                if not self.initialized:
-                    self.report_error("Device is not initialized")
-                    return None
-                cmd = "get " + self.get_outlet_commands[item].format(n=n)
-            else:
-                self.report_error(f"Item not found: {item}")
+            if not self._send_command(cmd):
                 return None
+            return self._read_reply()
 
-        if not self._send_command(cmd):
+        # must be initialized to get outlet values
+        if not self.initialized:
+            self.report_error("Device is not initialized")
             return None
-
-        return self._read_reply()
+        intup = trailing_int(item)
+        # get values for all outlets
+        if intup is None:
+            self.report_error(f"Must specify an outlet number (add as suffix to {item})")
+            return None
+        # get value for specific outlet
+        n = intup[1]
+        item = intup[0]
+        # check outlet number
+        if n < 1 or n > self.outlet_count:
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
+            return None
+        if item in self.get_outlet_commands:
+            cmd = "get " + self.get_outlet_commands[item][0].format(n=n)
+            if not self._send_command(cmd):
+                return None
+            result =  self._read_reply()
+            if result is None:
+                self.report_error(f"Outlet {item} null return value")
+                return None
+            if "int" in self.get_outlet_commands[item][1]:
+                try:
+                    result = int(result)
+                except ValueError:
+                    self.report_error(f"Outlet {item} int parse error")
+                    result = None
+            elif "float" in self.get_outlet_commands[item][1]:
+                try:
+                    result = float(result)
+                except ValueError:
+                    self.report_error(f"Outlet {item} float parse error")
+                    result = None
+            elif "bool" in self.get_outlet_commands[item][1]:
+                try:
+                    result = bool(result)
+                except ValueError:
+                    self.report_error(f"Outlet {item} bool parse error")
+                    result = None
+            return result
+        self.report_error(f"Item not found: {item}")
+        return None
 
     def outlet_on(self, n: int) -> bool:
         """ Turn specified outlet on. """
@@ -403,7 +438,7 @@ class EatonEMAT(HardwareDeviceBase):
         if n < 1 or n > self.outlet_count:
             self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
             return None
-        cmd = "get " + self.get_outlet_commands["outlet_status"].format(n=n)
+        cmd = "get " + self.get_outlet_commands["outlet_status"][0].format(n=n)
         if not self._send_command(cmd):
             return None
         return self._read_reply()
@@ -464,10 +499,10 @@ class EatonEMAT(HardwareDeviceBase):
         self.version = self.get_atomic_value("version")
         self.serial = self.get_atomic_value("serial_number")
         self.initialized = True
-        names = self.get_atomic_value("name")
+        names = self.get_all_values("name")
         for name in names.split("|"):
             self.outlet_names.append(name)
-        statuses = self.get_atomic_value("outlet_status")
+        statuses = self.get_all_values("outlet_status")
         for status in statuses.split("|"):
             self.outlet_onoff.append(int(status))
         return True
