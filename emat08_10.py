@@ -443,7 +443,7 @@ class EatonEMAT(HardwareDeviceBase):
         if not name:
             self.report_error("Outlet name cannot be empty")
             return False
-        cmd = "set " + self.set_commands["set_outlet_name"].format(n=n, name=name)
+        cmd = "set " + self.set_commands["outlet_name"].format(n=n, name=name)
         return self._send_command(cmd)
 
     def initialize(self) -> bool:
