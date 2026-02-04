@@ -5,7 +5,7 @@ import asyncio
 import re
 import time
 import threading
-from typing import Optional, Union, Pattern, List
+from typing import Optional, Union, Pattern, List, Tuple
 
 try:
     from hardware_device_base import HardwareDeviceBase
@@ -14,6 +14,10 @@ except ModuleNotFoundError:
 
 import telnetlib3
 
+def trailing_int(s: str) -> Tuple[str, int] | None:
+    """ return trailing integer from string or None """
+    m = re.search(r"^(.+?)(\d+)$", s)
+    return (m.group(1), int(m.group(2))) if m else None
 
 class EatonEMAT(HardwareDeviceBase):
     """
@@ -315,45 +319,48 @@ class EatonEMAT(HardwareDeviceBase):
     def get_atomic_value(self, item: str, n:Union[int, str]=None) -> Union[str, None]:
         """ Retrieve atomic values
 
-                :param item: String item to retrieve
+                :param item: String item to retrieve with outlet number appended.
                 :param n: Outlet to retrieve item for (required for outlet items, not required for
                             device items).
 
                 NOTE: n can be replaced with "x" to retrieve item values for all outlets
                 """
         # pylint: disable=too-many-branches,too-many-return-statements
-        if item in self.get_outlet_commands:
-            if n is None:
-                self.report_error("Outlet index (n) must be an integer or string x")
-                return None
-            if isinstance(n, int):
-                if not self.initialized:
-                    self.report_error("Device is not initialized")
-                    return None
-                if n < 1 or n > self.outlet_count:
-                    self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
-                    return None
-            if isinstance(n, str):
-                if n != "x":
-                    self.report_error("Outlet index (n) must be an integer or string x")
-                    return None
-            cmd = "get " + self.get_outlet_commands[item].format(n=n)
 
-        elif item in self.get_device_commands:
-            cmd = "get " + self.get_device_commands[item]
-
-        elif "help" in item:
+        if "help" in item:
             print("Device items (no outlet number required):")
             for k in self.get_device_commands:
                 print(k)
-            print("\nOutlet items (outlet number or x required):")
+            print("\nOutlet items (append outlet number or leave off for all outlets):")
             for k in self.get_outlet_commands:
                 print(k)
             return None
 
+        if item in self.get_device_commands:
+            cmd = "get " + self.get_device_commands[item]
+
         else:
-            self.report_error(f"Item not found: {item}")
-            return None
+            intup = trailing_int(item)
+            # get values for all outlets
+            if intup is None:
+                n = "x"
+            # get value for specific outlet
+            else:
+                n = intup[1]
+                item = intup[0]
+                # check outlet number
+                if n < 1 or n > self.outlet_count:
+                    self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
+                    return None
+            if item in self.get_outlet_commands:
+                # must be initialized to get outlet values
+                if not self.initialized:
+                    self.report_error("Device is not initialized")
+                    return None
+                cmd = "get " + self.get_outlet_commands[item].format(n=n)
+            else:
+                self.report_error(f"Item not found: {item}")
+                return None
 
         if not self._send_command(cmd):
             return None
