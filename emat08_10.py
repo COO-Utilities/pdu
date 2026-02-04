@@ -316,7 +316,7 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_atomic_value(self, item: str, n:Union[int, str]=None) -> Union[str, None]:
+    def get_atomic_value(self, item: str) -> Union[str, None]:
         """ Retrieve atomic values
 
                 :param item: String item to retrieve with outlet number appended.
@@ -463,13 +463,13 @@ class EatonEMAT(HardwareDeviceBase):
         self.model = self.get_atomic_value("model")
         self.version = self.get_atomic_value("version")
         self.serial = self.get_atomic_value("serial_number")
-        names = self.get_atomic_value("name", "x")
+        self.initialized = True
+        names = self.get_atomic_value("name")
         for name in names.split("|"):
             self.outlet_names.append(name)
-        statuses = self.get_atomic_value("outlet_status", "x")
+        statuses = self.get_atomic_value("outlet_status")
         for status in statuses.split("|"):
             self.outlet_onoff.append(int(status))
-        self.initialized = True
         return True
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
