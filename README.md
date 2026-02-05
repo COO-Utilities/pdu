@@ -46,7 +46,7 @@ pdu = EatonEMAT()
 
 # Connect over SSH (default port is 22)
 assert pdu.connect(
-    host="192.168.1.50",
+    host="redeaton1",
     port=23,
     username="admin",
     password="your_password",
