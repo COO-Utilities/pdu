@@ -83,6 +83,12 @@ class EatonEMAT(HardwareDeviceBase):
         self.version: str = ""
         self.serial: str = ""
 
+        # Connection params
+        self.host: str = ""
+        self.port: int = 0
+        self.username: str = ""
+        self.password: str = ""
+
         self.set_commands = {
             "outlet_on": "PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0",
             "outlet_off": "PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0",
@@ -192,6 +198,10 @@ class EatonEMAT(HardwareDeviceBase):
             ok = self._reader is not None and self._writer is not None
             self._set_connected(ok)
             if ok:
+                self.host = host
+                self.port = port
+                self.username = username
+                self.password = password
                 self.report_info(f"Connected (telnetlib3) to {host}:{port}")
             return ok
         except Exception as e:
@@ -293,10 +303,21 @@ class EatonEMAT(HardwareDeviceBase):
                 self._last_reply = reply
             self.report_debug(f"Executed command: {command}")
             return True
-        except Exception as e:
-            self.report_error(f"Telnet exec failed: {e}")
-            self._last_reply = None
-            return False
+        except Exception:
+            self.disconnect()
+            self.report_info("reconnecting...")
+            self.connect(self.host, self.port, username=self.username, password=self.password)
+            self.initialize()
+            try:
+                with self.lock:
+                    reply = self._run(self._asend_and_read(command))
+                    self._last_reply = reply
+                self.report_debug(f"Executed command: {command}")
+                return True
+            except Exception as e:
+                self.report_error(f"Telnet exec failed: {e}")
+                self._last_reply = None
+                return False
 
     async def _asend_and_read(self, command: str) -> str:
         assert self._writer is not None
