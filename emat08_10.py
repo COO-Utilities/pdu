@@ -394,7 +394,7 @@ class EatonEMAT(HardwareDeviceBase):
                     result = None
             elif "bool" in self.get_outlet_commands[item][1]:
                 try:
-                    result = bool(result)
+                    result = int(result) == 1
                 except ValueError:
                     self.report_error(f"Outlet {item} bool parse error")
                     result = None
