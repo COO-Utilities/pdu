@@ -5,7 +5,7 @@ import asyncio
 import re
 import time
 import threading
-from typing import Optional, Union, Pattern, List
+from typing import Optional, Union, Pattern, List, Tuple
 
 try:
     from hardware_device_base import HardwareDeviceBase
@@ -14,6 +14,10 @@ except ModuleNotFoundError:
 
 import telnetlib3
 
+def trailing_int(s: str) -> Tuple[str, int] | None:
+    """ return trailing integer from string or None """
+    m = re.search(r"^(.+?)(\d+)$", s)
+    return (m.group(1), int(m.group(2))) if m else None
 
 class EatonEMAT(HardwareDeviceBase):
     """
@@ -79,49 +83,59 @@ class EatonEMAT(HardwareDeviceBase):
         self.version: str = ""
         self.serial: str = ""
 
+        # Connection params
+        self.host: str = ""
+        self.port: int = 0
+        self.username: str = ""
+        self.password: str = ""
+
         self.set_commands = {
             "outlet_on": "PDU.OutletSystem.Outlet[{n}].DelayBeforeStartup 0",
             "outlet_off": "PDU.OutletSystem.Outlet[{n}].DelayBeforeShutdown 0",
             # ModuleReset: reset statistics for outlet
             "reset_statistics": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ModuleReset 1",
             # AutomaticRestart, p: 0 - not powered, 1 - powered, 2 - last state at startup
-            "set_auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}"
+            "set_auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart {p}",
+            # iName: name for outlet
+            "outlet_name": "PDU.OutletSystem.Outlet[{n}].iName {name}"
         }
         # GET Command templates for outlet items (override per firmware). {n} is 1-based
         self.get_outlet_commands = {
             # SwitchOnOff: 0 - Off, 1 - On
-            "outlet_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff",
+            "outlet_status": ("PDU.OutletSystem.Outlet[{n}].PresentStatus.SwitchOnOff",
+                              "bool"),
             # OverCurrent: 0 - Normal, 1 - Low warning, 2 - Low critical,
             #              3 - High warning, 4 - High critical
-            "overcurrent_status": "PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent",
+            "overcurrent_status": ("PDU.OutletSystem.Outlet[{n}].PresentStatus.OverCurrent",
+                                   "int"),
             # ActivePower, ApparentPower, ReactivePower: Watts
-            "active_power": "PDU.OutletSystem.Outlet[{n}].ActivePower",
-            "apparent_power": "PDU.OutletSystem.Outlet[{n}].ApparentPower",
-            "reactive_power": "PDU.OutletSystem.Outlet[{n}].ReactivePower",
+            "active_power": ("PDU.OutletSystem.Outlet[{n}].ActivePower", "float"),
+            "apparent_power": ("PDU.OutletSystem.Outlet[{n}].ApparentPower", "float"),
+            "reactive_power": ("PDU.OutletSystem.Outlet[{n}].ReactivePower", "float"),
             # ConfigCurrent, Current: Amps
-            "config_current": "PDU.OutletSystem.Outlet[{n}].ConfigCurrent",
-            "current": "PDU.OutletSystem.Outlet[{n}].Current",
+            "config_current": ("PDU.OutletSystem.Outlet[{n}].ConfigCurrent", "float"),
+            "current": ("PDU.OutletSystem.Outlet[{n}].Current", "float"),
             # Type: 0..255
-            "type": "PDU.OutletSystem.Outlet[{n}].Type",
-            "peak_factor": "PDU.OutletSystem.Outlet[{n}].PeakFactor",
-            "phase_id": "PDU.OutletSystem.Outlet[{n}].PhaseID",
-            "pole_id": "PDU.OutletSystem.Outlet[{n}].PoleID",
-            "power_factor": "PDU.OutletSystem.Outlet[{n}].PowerFactor",
+            "type": ("PDU.OutletSystem.Outlet[{n}].Type", "int"),
+            "peak_factor": ("PDU.OutletSystem.Outlet[{n}].PeakFactor", "float"),
+            "phase_id": ("PDU.OutletSystem.Outlet[{n}].PhaseID", "int"),
+            "pole_id": ("PDU.OutletSystem.Outlet[{n}].PoleID", "int"),
+            "power_factor": ("PDU.OutletSystem.Outlet[{n}].PowerFactor", "float"),
             # Switchable: 0 - Disabled, 1 - Enabled
-            "switchable": "PDU.OutletSystem.Outlet[{n}].Switchable",
+            "switchable": ("PDU.OutletSystem.Outlet[{n}].Switchable", "bool"),
             # iDesignator, iName: <string>
-            "designator": "PDU.OutletSystem.Outlet[{n}].iDesignator",
-            "name": "PDU.OutletSystem.Outlet[{n}].iName",
+            "designator": ("PDU.OutletSystem.Outlet[{n}].iDesignator", "str"),
+            "name": ("PDU.OutletSystem.Outlet[{n}].iName", "str"),
             # OutletID: <int>
-            "outlet_id": "PDU.OutletSystem.Outlet[{n}].OutletID",
+            "outlet_id": ("PDU.OutletSystem.Outlet[{n}].OutletID", "int"),
             # Energy: Watt-hours
-            "energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy",
+            "energy": ("PDU.OutletSystem.Outlet[{n}].Statistic[5].Energy", "int"),
             # Reset.Time: Unix sec of last reset
-            "reset_time": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetTime",
+            "reset_time": ("PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetTime", "float"),
             # Reset.Energy: Energy at last reset
-            "reset_energy": "PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetEnergy",
+            "reset_energy": ("PDU.OutletSystem.Outlet[{n}].Statistic[5].ResetEnergy", "int"),
             # AutomaticRestart: 0 - not powered, 1 - powered, 2 - last state at startup
-            "auto_restart": "PDU.OutletSystem.Outlet[{n}].AutomaticRestart",
+            "auto_restart": ("PDU.OutletSystem.Outlet[{n}].AutomaticRestart", "int")
         }
         # Command templates for device items.
         self.get_device_commands = {
@@ -184,6 +198,10 @@ class EatonEMAT(HardwareDeviceBase):
             ok = self._reader is not None and self._writer is not None
             self._set_connected(ok)
             if ok:
+                self.host = host
+                self.port = port
+                self.username = username
+                self.password = password
                 self.report_info(f"Connected (telnetlib3) to {host}:{port}")
             return ok
         except Exception as e:
@@ -285,10 +303,21 @@ class EatonEMAT(HardwareDeviceBase):
                 self._last_reply = reply
             self.report_debug(f"Executed command: {command}")
             return True
-        except Exception as e:
-            self.report_error(f"Telnet exec failed: {e}")
-            self._last_reply = None
-            return False
+        except Exception:
+            self.disconnect()
+            self.report_info("reconnecting...")
+            self.connect(self.host, self.port, username=self.username, password=self.password)
+            self.initialize()
+            try:
+                with self.lock:
+                    reply = self._run(self._asend_and_read(command))
+                    self._last_reply = reply
+                self.report_debug(f"Executed command: {command}")
+                return True
+            except Exception as e:
+                self.report_error(f"Telnet exec failed: {e}")
+                self._last_reply = None
+                return False
 
     async def _asend_and_read(self, command: str) -> str:
         assert self._writer is not None
@@ -310,53 +339,89 @@ class EatonEMAT(HardwareDeviceBase):
             return None
         return self._last_reply if self._last_reply is not None else ""
 
-    def get_atomic_value(self, item: str, n:Union[int, str]=None) -> Union[str, None]:
+    def get_all_values(self, item: str) -> Union[str, None]:
+        """ Retrieve all outlet values
+            :param item: String item to retrieve (no outlet number required).
+        """
+        # must be initialized to get outlet values
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return None
+        if item in self.get_outlet_commands:
+            cmd = "get " + self.get_outlet_commands[item][0].format(n="x")
+            if not self._send_command(cmd):
+                return None
+            return self._read_reply()
+        self.report_error(f"Not an outlet item: {item}")
+        return None
+
+    def get_atomic_value(self, item: str) -> None | str | int | float | bool:
         """ Retrieve atomic values
 
-                :param item: String item to retrieve
-                :param n: Outlet to retrieve item for (required for outlet items, not required for
-                            device items).
-
-                NOTE: n can be replaced with "x" to retrieve item values for all outlets
-                """
+            :param item: String item to retrieve with outlet number appended.
+            """
         # pylint: disable=too-many-branches,too-many-return-statements
-        if item in self.get_outlet_commands:
-            if n is None:
-                self.report_error("Outlet index (n) must be an integer or string x")
-                return None
-            if isinstance(n, int):
-                if not self.initialized:
-                    self.report_error("Device is not initialized")
-                    return None
-                if n < 1 or n > self.outlet_count:
-                    self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
-                    return None
-            if isinstance(n, str):
-                if n != "x":
-                    self.report_error("Outlet index (n) must be an integer or string x")
-                    return None
-            cmd = "get " + self.get_outlet_commands[item].format(n=n)
 
-        elif item in self.get_device_commands:
-            cmd = "get " + self.get_device_commands[item]
-
-        elif "help" in item:
+        if "help" in item:
             print("Device items (no outlet number required):")
             for k in self.get_device_commands:
                 print(k)
-            print("\nOutlet items (outlet number or x required):")
+            print("\nOutlet items (append outlet number or leave off for all outlets):")
             for k in self.get_outlet_commands:
-                print(k)
+                print(k[0])
             return None
 
-        else:
-            self.report_error(f"Item not found: {item}")
-            return None
+        if item in self.get_device_commands:
+            cmd = "get " + self.get_device_commands[item]
+            if not self._send_command(cmd):
+                return None
+            return self._read_reply()
 
-        if not self._send_command(cmd):
+        # must be initialized to get outlet values
+        if not self.initialized:
+            self.report_error("Device is not initialized")
             return None
-
-        return self._read_reply()
+        intup = trailing_int(item)
+        # get values for all outlets
+        if intup is None:
+            self.report_error(f"Must specify an outlet number (add as suffix to {item})")
+            return None
+        # get value for specific outlet
+        n = intup[1]
+        item = intup[0]
+        # check outlet number
+        if n < 1 or n > self.outlet_count:
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
+            return None
+        if item in self.get_outlet_commands:
+            cmd = "get " + self.get_outlet_commands[item][0].format(n=n)
+            if not self._send_command(cmd):
+                return None
+            result =  self._read_reply()
+            if result is None:
+                self.report_error(f"Outlet {item} null return value")
+                return None
+            if "int" in self.get_outlet_commands[item][1]:
+                try:
+                    result = int(result)
+                except ValueError:
+                    self.report_error(f"Outlet {item} int parse error")
+                    result = None
+            elif "float" in self.get_outlet_commands[item][1]:
+                try:
+                    result = float(result)
+                except ValueError:
+                    self.report_error(f"Outlet {item} float parse error")
+                    result = None
+            elif "bool" in self.get_outlet_commands[item][1]:
+                try:
+                    result = int(result) == 1
+                except ValueError:
+                    self.report_error(f"Outlet {item} bool parse error")
+                    result = None
+            return result
+        self.report_error(f"Item not found: {item}")
+        return None
 
     def outlet_on(self, n: int) -> bool:
         """ Turn specified outlet on. """
@@ -394,7 +459,7 @@ class EatonEMAT(HardwareDeviceBase):
         if n < 1 or n > self.outlet_count:
             self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
             return None
-        cmd = "get " + self.get_outlet_commands["outlet_status"].format(n=n)
+        cmd = "get " + self.get_outlet_commands["outlet_status"][0].format(n=n)
         if not self._send_command(cmd):
             return None
         return self._read_reply()
@@ -427,6 +492,23 @@ class EatonEMAT(HardwareDeviceBase):
         cmd = "set " + self.set_commands["set_autostart"].format(n=n, p=p)
         return self._send_command(cmd)
 
+    def set_outlet_name(self, n:int, name: str) -> bool:
+        """ Set name for given outlet.
+         n - outlet number (1-8)
+         name - name of outlet
+         """
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return False
+        if n < 1 or n > self.outlet_count:
+            self.report_error(f"Outlet index must be >= 1 or <= {self.outlet_count}")
+            return False
+        if not name:
+            self.report_error("Outlet name cannot be empty")
+            return False
+        cmd = "set " + self.set_commands["outlet_name"].format(n=n, name=name)
+        return self._send_command(cmd)
+
     def initialize(self) -> bool:
         """ Initialize device properties. """
         if not self.is_connected():
@@ -437,13 +519,13 @@ class EatonEMAT(HardwareDeviceBase):
         self.model = self.get_atomic_value("model")
         self.version = self.get_atomic_value("version")
         self.serial = self.get_atomic_value("serial_number")
-        names = self.get_atomic_value("name", "x")
+        self.initialized = True
+        names = self.get_all_values("name")
         for name in names.split("|"):
             self.outlet_names.append(name)
-        statuses = self.get_atomic_value("outlet_status", "x")
+        statuses = self.get_all_values("outlet_status")
         for status in statuses.split("|"):
             self.outlet_onoff.append(int(status))
-        self.initialized = True
         return True
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
