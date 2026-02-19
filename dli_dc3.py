@@ -138,6 +138,10 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return None
 
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return None
+
         # check outlet number
         if outlet_num < 0 or outlet_num >= self.outlet_count:
             self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
@@ -173,6 +177,10 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return None
 
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return None
+
         # check outlet number
         if outlet_num < 0 or outlet_num >= self.outlet_count:
             self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
@@ -190,6 +198,10 @@ class Dlidc3(HardwareSensorBase):
         # pylint: disable=too-many-return-statements
         if not self.is_connected():
             self.report_error("Device is not connected")
+            return None
+
+        if not self.initialized:
+            self.report_error("Device is not initialized")
             return None
 
         intup = trailing_int(item)
