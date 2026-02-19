@@ -106,9 +106,7 @@ class Dlidc3(HardwareSensorBase):
         self._send_command(cmd)
         self.model = self._read_reply().strip()
         # name
-        cmd = GET_PREFIX + self.device_commands["name"]
-        self._send_command(cmd)
-        self.name = self._read_reply().strip()
+        self.name = self.get_device_name()
         # version
         cmd = GET_PREFIX + self.device_commands["version"]
         self._send_command(cmd)
