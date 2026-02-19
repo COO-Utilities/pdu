@@ -1,6 +1,6 @@
 """Class for DLI DC 3 Power Controller"""
 from typing import Optional, Union, List
-
+import paramiko
 from paramiko.channel import ChannelFile
 from emat08_10 import trailing_int
 
@@ -8,8 +8,6 @@ try:
     from hardware_device_base import HardwareSensorBase
 except ModuleNotFoundError:
     from hardware_device_base.hardware_device_base import HardwareSensorBase  # type: ignore
-
-import paramiko
 
 GET_PREFIX = "uom get "
 SET_PREFIX = "uom set "
@@ -134,7 +132,7 @@ class Dlidc3(HardwareSensorBase):
 
     def get_atomic_value(self, item: str ="") -> Union[float, int, str, None]:
         """Get atomic values from DLI DC 3 Power Controller"""
-        # pylint: too-many-return-statements
+        # pylint: disable=too-many-return-statements
         if not self.is_connected():
             self.report_error("Device is not connected")
             return None
