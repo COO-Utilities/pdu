@@ -59,7 +59,11 @@ class Dlidc3(HardwareSensorBase):
 
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh.connect(hostname=host, username=username, password=password)
+        try:
+            self.ssh.connect(hostname=host, username=username, password=password)
+        except paramiko.SSHException as ex:
+            self.report_error(str(ex))
+            return
         self._set_connected(True)
 
     def disconnect(self) -> None:
