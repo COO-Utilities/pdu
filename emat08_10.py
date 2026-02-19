@@ -382,7 +382,7 @@ class EatonEMAT(HardwareDeviceBase):
             self.report_error("Device is not initialized")
             return None
         intup = trailing_int(item)
-        # get values for all outlets
+        # get value for specified outlet
         if intup is None:
             self.report_error(f"Must specify an outlet number (add as suffix to {item})")
             return None
