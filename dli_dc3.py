@@ -253,7 +253,8 @@ class Dlidc3(HardwareSensorBase):
             self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
             return False
 
-        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(outlet_num=outlet_num) + " true"
+        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(
+            outlet_num=outlet_num) + " true"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             return True
@@ -274,7 +275,8 @@ class Dlidc3(HardwareSensorBase):
             self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
             return False
 
-        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(outlet_num=outlet_num) + " false"
+        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(
+            outlet_num=outlet_num) + " false"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             return True
