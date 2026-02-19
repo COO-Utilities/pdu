@@ -179,7 +179,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + \
-            " true" if outlet_state else " false"
+              (" true" if outlet_state else " false")
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             self.outlet_onoff[outlet_num] = 1 if self.get_outlet_state(outlet_num) else 0
