@@ -117,7 +117,7 @@ class Dlidc3(HardwareSensorBase):
         for n in range(self.outlet_count):
             name = self.get_outlet_name(n)
             self.outlet_names.append(name)
-            state = self.get_outlet_state(n)
+            state = self.outlet_status(n)
             self.outlet_onoff.append(1 if state else 0)
         self.initialized = True
 
@@ -160,7 +160,7 @@ class Dlidc3(HardwareSensorBase):
             self.outlet_names[outlet_num] = self.get_outlet_name(outlet_num)
         return None
 
-    def get_outlet_state(self, outlet_num:int) -> Union[bool, None]:
+    def outlet_status(self, outlet_num:int) -> Optional[bool]:
         """Retrieve outlet state from DLI DC 3 Power Controller"""
         if not self.is_connected():
             self.report_error("Device is not connected")
@@ -177,14 +177,54 @@ class Dlidc3(HardwareSensorBase):
             return "true" in state
         return None
 
-    def set_outlet_state(self, outlet_num:int, outlet_state:bool) -> Union[bool, None]:
-        """Set outlet state from DLI DC 3 Power Controller"""
+    def outlet_on(self, outlet_num:int) -> bool:
+        """Set outlet on"""
         if not self.is_connected():
             self.report_error("Device is not connected")
-            return None
+            return False
 
         if not self.initialized:
             self.report_error("Device is not initialized")
+            return False
+
+        # check outlet number
+        if outlet_num < 0 or outlet_num >= self.outlet_count:
+            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+            return False
+
+        cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + " true"
+        if self._send_command(cmd):
+            _ = self._read_reply().strip()
+            self.outlet_onoff[outlet_num] = 1
+            return True
+        return False
+
+    def outlet_off(self, outlet_num:int) -> bool:
+        """Set outlet off"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return False
+
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return False
+
+        # check outlet number
+        if outlet_num < 0 or outlet_num >= self.outlet_count:
+            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+            return False
+
+        cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + " false"
+        if self._send_command(cmd):
+            _ = self._read_reply().strip()
+            self.outlet_onoff[outlet_num] = 0
+            return True
+        return False
+
+    def lock_status(self, outlet_num:int) -> Optional[bool]:
+        """Retrieve outlet state from DLI DC 3 Power Controller"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
             return None
 
         # check outlet number
@@ -192,12 +232,53 @@ class Dlidc3(HardwareSensorBase):
             self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
             return None
 
-        cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + \
-              (" true" if outlet_state else " false")
+        cmd = GET_PREFIX + self.outlet_commands["locked"][0].format(outlet_num=outlet_num)
+        if self._send_command(cmd):
+            state = self._read_reply().strip()
+            return "true" in state
+        return None
+
+    def lock_outlet(self, outlet_num:int) -> bool:
+        """Lock outlet state"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return False
+
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return False
+
+        # check outlet number
+        if outlet_num < 0 or outlet_num >= self.outlet_count:
+            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+            return False
+
+        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(outlet_num=outlet_num) + " true"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
-            self.outlet_onoff[outlet_num] = 1 if self.get_outlet_state(outlet_num) else 0
-        return True
+            return True
+        return False
+
+    def unlock_outlet(self, outlet_num:int) -> bool:
+        """Unlock outlet state"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return False
+
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return False
+
+        # check outlet number
+        if outlet_num < 0 or outlet_num >= self.outlet_count:
+            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+            return False
+
+        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(outlet_num=outlet_num) + " false"
+        if self._send_command(cmd):
+            _ = self._read_reply().strip()
+            return True
+        return False
 
     def get_atomic_value(self, item: str ="") -> Union[float, int, str, None]:
         """Get atomic values from DLI DC 3 Power Controller"""
