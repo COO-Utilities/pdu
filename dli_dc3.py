@@ -26,6 +26,7 @@ class Dlidc3(HardwareSensorBase):
         self.outlet_onoff: List[int] = []
         self.model: str = ""
         self.version: str = ""
+        self.name: str = ""
 
         # Connection params
         self.host: str = ""
@@ -45,6 +46,7 @@ class Dlidc3(HardwareSensorBase):
         }
         self.device_commands = {
             "model": "relay/model",
+            "name": "relay/name",
             "version": "relay/version"
         }
 
@@ -103,6 +105,10 @@ class Dlidc3(HardwareSensorBase):
         cmd = GET_PREFIX + self.device_commands["model"]
         self._send_command(cmd)
         self.model = self._read_reply().strip()
+        # name
+        cmd = GET_PREFIX + self.device_commands["name"]
+        self._send_command(cmd)
+        self.name = self._read_reply().strip()
         # version
         cmd = GET_PREFIX + self.device_commands["version"]
         self._send_command(cmd)
