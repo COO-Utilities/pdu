@@ -70,6 +70,8 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return False
 
+        self.report_debug(cmd)
+
         response = self.ssh.exec_command(cmd)
 
         ssh_error = response[2].read().decode("utf-8")
@@ -160,6 +162,9 @@ class Dlidc3(HardwareSensorBase):
             self.report_error(f"Outlet {item} null return value")
             return None
         if "int" in self.outlet_commands[item][1]:
+            if "n" in result:
+                self.report_warning(f"Outlet {item} null return value")
+                return None
             try:
                 result = int(result)
             except ValueError:
