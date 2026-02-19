@@ -43,6 +43,10 @@ class Dlidc3(HardwareSensorBase):
             "transient_state": ("relay/outlets/{outlet_num}/transient_state", "bool"),
             "physical_state": ("relay/outlets/{outlet_num}/physical_state", "bool")
         }
+        self.device_commands = {
+            "model": "relay/model",
+            "version": "relay/version"
+        }
 
     # pylint: disable=W0221
     def connect(self, host:str, username:str, password:str,
@@ -89,6 +93,24 @@ class Dlidc3(HardwareSensorBase):
             return None
         return self.stdout.read().decode("utf-8")
 
+    def initialize(self) -> None:
+        """Initialize DLI DC 3 Power Controller Class Instance"""
+        # model
+        cmd = GET_PREFIX + self.device_commands["model"][0]
+        self._send_command(cmd)
+        self.model = self._read_reply().strip()
+        # version
+        cmd = GET_PREFIX + self.device_commands["version"][0]
+        self._send_command(cmd)
+        self.version = self._read_reply().strip()
+        # outlet names and states
+        for n in range(self.outlet_count):
+            name = self.get_outlet_name(n)
+            self.outlet_names.append(name)
+            state = self.get_outlet_state(n)
+            self.outlet_onoff.append(1 if state else 0)
+        self.initialized = True
+
     def get_outlet_name(self, outlet_num:int) -> Union[str, None]:
         """Retrieve outlet name from DLI DC 3 Power Controller"""
         if not self.is_connected():
@@ -101,9 +123,10 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         cmd = GET_PREFIX + self.outlet_commands["name"][0].format(outlet_num=outlet_num)
-        self._send_command(cmd)
-        name = self._read_reply().strip()
-        return name
+        if self._send_command(cmd):
+            name = self._read_reply().strip()
+            return name
+        return None
 
     def set_outlet_name(self, outlet_num:int, outlet_name:str) -> None:
         """Set outlet name from DLI DC 3 Power Controller"""
@@ -118,8 +141,9 @@ class Dlidc3(HardwareSensorBase):
 
         cmd = SET_PREFIX + self.outlet_commands["name"][0].format(
             outlet_num=outlet_num) + " '\"" + outlet_name + "\"'"
-        self._send_command(cmd)
-        _ = self._read_reply().strip()
+        if self._send_command(cmd):
+            _ = self._read_reply().strip()
+            self.outlet_names[outlet_num] = self.get_outlet_name(outlet_num)
         return None
 
     def get_outlet_state(self, outlet_num:int) -> Union[bool, None]:
@@ -134,9 +158,10 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         cmd = GET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num)
-        self._send_command(cmd)
-        state = self._read_reply().strip()
-        return "true" in state
+        if self._send_command(cmd):
+            state = self._read_reply().strip()
+            return "true" in state
+        return None
 
     def set_outlet_state(self, outlet_num:int, outlet_state:bool) -> Union[bool, None]:
         """Set outlet state from DLI DC 3 Power Controller"""
@@ -151,8 +176,9 @@ class Dlidc3(HardwareSensorBase):
 
         cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + \
             " true" if outlet_state else " false"
-        self._send_command(cmd)
-        _ = self._read_reply().strip()
+        if self._send_command(cmd):
+            _ = self._read_reply().strip()
+            self.outlet_onoff[outlet_num] = 1 if self.get_outlet_state(outlet_num) else 0
         return True
 
     def get_atomic_value(self, item: str ="") -> Union[float, int, str, None]:
