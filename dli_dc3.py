@@ -96,11 +96,11 @@ class Dlidc3(HardwareSensorBase):
     def initialize(self) -> None:
         """Initialize DLI DC 3 Power Controller Class Instance"""
         # model
-        cmd = GET_PREFIX + self.device_commands["model"][0]
+        cmd = GET_PREFIX + self.device_commands["model"]
         self._send_command(cmd)
         self.model = self._read_reply().strip()
         # version
-        cmd = GET_PREFIX + self.device_commands["version"][0]
+        cmd = GET_PREFIX + self.device_commands["version"]
         self._send_command(cmd)
         self.version = self._read_reply().strip()
         # outlet names and states
