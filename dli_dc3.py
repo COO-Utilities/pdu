@@ -121,6 +121,30 @@ class Dlidc3(HardwareSensorBase):
             self.outlet_onoff.append(1 if state else 0)
         self.initialized = True
 
+    def get_device_name(self) -> Optional[str]:
+        """Get device name for DLI DC 3 Power Controller"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return None
+
+        cmd = GET_PREFIX + self.device_commands["name"]
+        if self._send_command(cmd):
+            return self._read_reply().strip()
+        return None
+
+    def set_device_name(self, device_name:str) -> bool:
+        """Set device name for DLI DC 3 Power Controller"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return False
+
+        cmd = SET_PREFIX + self.device_commands["name"] + " '\"" + device_name + "\"'"
+        if self._send_command(cmd):
+            _ = self._read_reply().strip()
+            self.name = device_name
+            return True
+        return False
+
     def get_outlet_name(self, outlet_num:int) -> Union[str, None]:
         """Retrieve outlet name from DLI DC 3 Power Controller"""
         if not self.is_connected():
@@ -134,8 +158,7 @@ class Dlidc3(HardwareSensorBase):
 
         cmd = GET_PREFIX + self.outlet_commands["name"][0].format(outlet_num=outlet_num)
         if self._send_command(cmd):
-            name = self._read_reply().strip()
-            return name
+            return self._read_reply().strip()
         return None
 
     def set_outlet_name(self, outlet_num:int, outlet_name:str) -> None:
