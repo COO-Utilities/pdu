@@ -39,17 +39,17 @@ pip install -e .
 ### Use the Eaton EMAT Telnet driver
 
 ```python
-from emat08_10 import EatonEMAT
+from src.emat08_10 import EatonEMAT
 
 # Create driver (3s read timeout)
 pdu = EatonEMAT()
 
 # Connect over SSH (default port is 22)
 assert pdu.connect(
-    host="redeaton1",
-    port=23,
-    username="admin",
-    password="your_password",
+  host="redeaton1",
+  port=23,
+  username="admin",
+  password="your_password",
 )
 
 # Initialize pdu object (good to do first)
@@ -69,8 +69,9 @@ print("Status:", reply)
 pdu.get_atomic_value("status", "x")
 
 # Device info
-print("Model:", pdu.get_atomic_value("model"))       # PDU.PowerSummary.iPartNumber
-print("Firmware Version:", pdu.get_atomic_value("version")) # PDU.PowerSummary.iVersion
+print("Model:", pdu.get_atomic_value("model"))  # PDU.PowerSummary.iPartNumber
+print("Firmware Version:",
+      pdu.get_atomic_value("version"))  # PDU.PowerSummary.iVersion
 
 # Clean up
 pdu.disconnect()

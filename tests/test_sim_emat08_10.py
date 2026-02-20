@@ -2,7 +2,7 @@
 import socket
 import pytest
 
-from emat08_10 import EatonEMAT
+from src.emat08_10 import EatonEMAT
 
 
 class FakeSocket:
