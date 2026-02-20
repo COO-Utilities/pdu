@@ -30,7 +30,7 @@ class EatonEMAT(HardwareDeviceBase):
     Example
     -------
     Basic usage:
-        >>> from emat08_10 import EatonEMAT
+        >>> from src.emat08_10 import EatonEMAT
         >>> pdu = EatonEMAT()
         >>> pdu.connect("192.168.1.50", 23, username="admin", password="secret")
         True
