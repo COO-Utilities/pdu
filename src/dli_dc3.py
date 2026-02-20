@@ -9,8 +9,8 @@ try:
 except ModuleNotFoundError:
     from hardware_device_base.hardware_device_base import HardwareSensorBase  # type: ignore
 
-GET_PREFIX = "uom get "
-SET_PREFIX = "uom set "
+GET_PREFIX = "uom get"
+SET_PREFIX = "uom set"
 
 # pylint: disable=too-many-instance-attributes
 class Dlidc3(HardwareSensorBase):
@@ -52,8 +52,8 @@ class Dlidc3(HardwareSensorBase):
         }
 
     # pylint: disable=W0221
-    def connect(self, host:str, port:int = 23, username:str = "admin", password:str = "",
-                *args, **kwargs) -> None:
+    def connect(self, host:str, port:int = 23, username:str = "", password:str = "",
+                **kwargs) -> None:
         """Connect to DLI DC 3 Power Controller"""
 
         self.host = host
@@ -114,13 +114,13 @@ class Dlidc3(HardwareSensorBase):
     def initialize(self) -> None:
         """Initialize DLI DC 3 Power Controller Class Instance"""
         # model
-        cmd = GET_PREFIX + self.device_commands["model"]
+        cmd = f"{GET_PREFIX} {self.device_commands["model"]}"
         self._send_command(cmd)
         self.model = self._read_reply().strip()
         # name
         self.name = self.get_device_name()
         # version
-        cmd = GET_PREFIX + self.device_commands["version"]
+        cmd = f"{GET_PREFIX} {self.device_commands["version"]}
         self._send_command(cmd)
         self.version = self._read_reply().strip()
         # outlet names and states
@@ -137,7 +137,7 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return None
 
-        cmd = GET_PREFIX + self.device_commands["name"]
+        cmd = f"{GET_PREFIX} {self.device_commands["name"]}"
         if self._send_command(cmd):
             return self._read_reply().strip()
         return None
@@ -148,7 +148,7 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return False
 
-        cmd = SET_PREFIX + self.device_commands["name"] + " '\"" + device_name + "\"'"
+        cmd = f"{SET_PREFIX} {self.device_commands["name"]} '\"{device_name}\"'"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             self.name = device_name
@@ -165,7 +165,7 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return None
 
-        cmd = GET_PREFIX + self.outlet_commands["name"][0].format(outlet_num=outlet_num)
+        cmd = f"{GET_PREFIX} {self.outlet_commands["name"][0].format(outlet_num=outlet_num)}"
         if self._send_command(cmd):
             return self._read_reply().strip()
         return None
@@ -184,8 +184,8 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return None
 
-        cmd = SET_PREFIX + self.outlet_commands["name"][0].format(
-            outlet_num=outlet_num) + " '\"" + outlet_name + "\"'"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["name"][0].format(
+            outlet_num=outlet_num)} '\"{outlet_name}\"'"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             self.outlet_names[outlet_num] = self.get_outlet_name(outlet_num)
@@ -201,7 +201,7 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return None
 
-        cmd = GET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num)
+        cmd = f"{GET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=outlet_num)}"
         if self._send_command(cmd):
             state = self._read_reply().strip()
             return "true" in state
@@ -221,7 +221,7 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return False
 
-        cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + " true"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=outlet_num)} true"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             self.outlet_onoff[outlet_num] = 1
@@ -242,7 +242,7 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return False
 
-        cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + " false"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=outlet_num)} false"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             self.outlet_onoff[outlet_num] = 0
@@ -259,7 +259,7 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return None
 
-        cmd = GET_PREFIX + self.outlet_commands["locked"][0].format(outlet_num=outlet_num)
+        cmd = f"{GET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=outlet_num)}"
         if self._send_command(cmd):
             state = self._read_reply().strip()
             return "true" in state
@@ -279,8 +279,7 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return False
 
-        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(
-            outlet_num=outlet_num) + " true"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=outlet_num)} true"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             return True
@@ -300,8 +299,8 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(outlet_num):
             return False
 
-        cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(
-            outlet_num=outlet_num) + " false"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(
+            outlet_num=outlet_num)} false"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             return True
@@ -330,9 +329,9 @@ class Dlidc3(HardwareSensorBase):
         if not self._validate_outlet(n):
             return None
         if item not in self.outlet_commands:
-            self.report_error(f"Outlet {item} not found in DLI DC 3")
+            self.report_error(f"Outlet {item} command not found in DLI DC 3")
             return None
-        cmd = GET_PREFIX + self.outlet_commands[item][0].format(outlet_num=n)
+        cmd = f"{GET_PREFIX} {self.outlet_commands[item][0].format(outlet_num=n)}"
         if not self._send_command(cmd):
             return None
         result = self._read_reply().strip()
