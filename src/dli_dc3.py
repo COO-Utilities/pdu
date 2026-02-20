@@ -30,6 +30,7 @@ class Dlidc3(HardwareSensorBase):
 
         # Connection params
         self.host: str = ""
+        self.port: int = 23
         self.username: str = ""
         self.password: str = ""
         self.ssh: Optional[paramiko.SSHClient] = None
@@ -51,11 +52,12 @@ class Dlidc3(HardwareSensorBase):
         }
 
     # pylint: disable=W0221
-    def connect(self, host:str, username:str, password:str,
+    def connect(self, host:str, port:int = 23, username:str = "admin", password:str = "",
                 *args, **kwargs) -> None:
         """Connect to DLI DC 3 Power Controller"""
 
         self.host = host
+        self.port = port
         self.username = username
         self.password = password
 
