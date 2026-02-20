@@ -82,6 +82,10 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return False
 
+        if not cmd.startswith("uom"):
+            self.report_error(f"Illegal command, only uom commands are supported: {cmd}")
+            return False
+
         self.report_debug(cmd)
 
         response = self.ssh.exec_command(cmd)
