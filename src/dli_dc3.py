@@ -99,7 +99,17 @@ class Dlidc3(HardwareSensorBase):
         if not self.is_connected():
             self.report_error("Device is not connected")
             return None
+        if not self.stdout:
+            self.report_error("No reply from DLI DC 3 (stdout not available)")
+            return None
         return self.stdout.read().decode("utf-8")
+
+    def _validate_outlet(self, outlet_num:int) -> bool:
+        """Validate outlet number"""
+        if outlet_num < 0 or outlet_num >= self.outlet_count:
+            self.report_error(f"Outlet index must be >= 0 and < {self.outlet_count}")
+            return False
+        return True
 
     def initialize(self) -> None:
         """Initialize DLI DC 3 Power Controller Class Instance"""
@@ -152,8 +162,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return None
 
         cmd = GET_PREFIX + self.outlet_commands["name"][0].format(outlet_num=outlet_num)
@@ -172,8 +181,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return None
 
         cmd = SET_PREFIX + self.outlet_commands["name"][0].format(
@@ -190,8 +198,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return None
 
         cmd = GET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num)
@@ -211,8 +218,7 @@ class Dlidc3(HardwareSensorBase):
             return False
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return False
 
         cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + " true"
@@ -233,8 +239,7 @@ class Dlidc3(HardwareSensorBase):
             return False
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return False
 
         cmd = SET_PREFIX + self.outlet_commands["state"][0].format(outlet_num=outlet_num) + " false"
@@ -251,8 +256,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return None
 
         cmd = GET_PREFIX + self.outlet_commands["locked"][0].format(outlet_num=outlet_num)
@@ -272,8 +276,7 @@ class Dlidc3(HardwareSensorBase):
             return False
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return False
 
         cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(
@@ -294,8 +297,7 @@ class Dlidc3(HardwareSensorBase):
             return False
 
         # check outlet number
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(outlet_num):
             return False
 
         cmd = SET_PREFIX + self.outlet_commands["locked"][0].format(
@@ -325,8 +327,7 @@ class Dlidc3(HardwareSensorBase):
         n = intup[1]
         item = intup[0]
         # check outlet number
-        if n < 0 or n >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 or < {self.outlet_count}")
+        if not self._validate_outlet(n):
             return None
         if item not in self.outlet_commands:
             self.report_error(f"Outlet {item} not found in DLI DC 3")
