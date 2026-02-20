@@ -120,7 +120,7 @@ class Dlidc3(HardwareSensorBase):
         # name
         self.name = self.get_device_name()
         # version
-        cmd = f"{GET_PREFIX} {self.device_commands["version"]}
+        cmd = f"{GET_PREFIX} {self.device_commands["version"]}"
         self._send_command(cmd)
         self.version = self._read_reply().strip()
         # outlet names and states
