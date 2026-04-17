@@ -122,7 +122,7 @@ class Dlidc3(HardwareSensorBase):
         self._send_command(cmd)
         self.model = self._read_reply().strip()
         # name
-        self.name = self.get_device_name()
+        self.name = str(self.get_device_name())
         # version
         cmd = f"{GET_PREFIX} {self.device_commands["version"]}"
         self._send_command(cmd)
@@ -130,7 +130,7 @@ class Dlidc3(HardwareSensorBase):
         # outlet names and states
         for n in range(self.outlet_count):
             name = self.get_outlet_name(n)
-            self.outlet_names.append(name)
+            self.outlet_names.append(str(name))
             state = self.outlet_status(n)
             self.outlet_onoff.append(1 if state else 0)
         self.initialized = True
@@ -191,7 +191,7 @@ class Dlidc3(HardwareSensorBase):
         cmd = f"{SET_PREFIX} {self.outlet_commands["name"][0].format(
             outlet_num=outlet_num)} '\"{outlet_name}\"'"
         if self._send_command(cmd):
-            _ = self._read_reply().strip()
+            _ = self._read_reply()
             self.outlet_names[outlet_num] = self.get_outlet_name(outlet_num)
         return None
 

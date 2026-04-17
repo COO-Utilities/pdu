@@ -45,7 +45,7 @@ class EatonEMAT(HardwareDeviceBase):
         >>> pdu.disconnect()
     """
     # pylint: disable=too-many-instance-attributes
-
+    # pylint: disable=broad-except
     def __init__(
         self,
         log: bool = True,
@@ -191,6 +191,8 @@ class EatonEMAT(HardwareDeviceBase):
         Open a Telnet connection to the PDU (telnetlib3).
         """
         if not self.validate_connection_params((host, port)):
+            return False
+        if username is None or password is None:
             return False
 
         try:
@@ -514,18 +516,27 @@ class EatonEMAT(HardwareDeviceBase):
         if not self.is_connected():
             self.report_error("Device not connected")
             return False
-        self.outlet_count = int(self.get_atomic_value("outlet_count"))
-        self.manufacturer = self.get_atomic_value("manufacturer")
-        self.model = self.get_atomic_value("model")
-        self.version = self.get_atomic_value("version")
-        self.serial = self.get_atomic_value("serial_number")
+        self.outlet_count = int(str(self.get_atomic_value("outlet_count")))
+        self.manufacturer = str(self.get_atomic_value("manufacturer"))
+        self.model = str(self.get_atomic_value("model"))
+        self.version = str(self.get_atomic_value("version"))
+        self.serial = str(self.get_atomic_value("serial_number"))
         self.initialized = True
+
         names = self.get_all_values("name")
-        for name in names.split("|"):
-            self.outlet_names.append(name)
+        if names:
+            for name in names.split("|"):
+                self.outlet_names.append(name)
+        else:
+            self.report_warning("No outlet names found")
+
         statuses = self.get_all_values("outlet_status")
-        for status in statuses.split("|"):
-            self.outlet_onoff.append(int(status))
+        if statuses:
+            for status in statuses.split("|"):
+                self.outlet_onoff.append(int(status))
+        else:
+            self.report_warning("No outlet statuses found")
+
         return True
 
     async def _await_any_prompt_and_write(self, prompts: List[str], to_write: str) -> None:
