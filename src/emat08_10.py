@@ -262,6 +262,7 @@ class EatonEMAT(HardwareDeviceBase):
                     pass
             if self._loop_thread is not None:
                 try:
+                    # Join thread to make sure it finishes before disconnecting
                     self._loop_thread.join(timeout=2.0)
                 except Exception:
                     pass
