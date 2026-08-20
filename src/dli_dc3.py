@@ -109,9 +109,9 @@ class Dlidc3(HardwareSensorBase):
         return self.stdout.read().decode("utf-8")
 
     def _validate_outlet(self, outlet_num:int) -> bool:
-        """Validate outlet number"""
-        if outlet_num < 0 or outlet_num >= self.outlet_count:
-            self.report_error(f"Outlet index must be >= 0 and < {self.outlet_count}")
+        """Validate outlet number (1-based)"""
+        if outlet_num < 1 or outlet_num > self.outlet_count:
+            self.report_error(f"Outlet number must be >= 1 and <= {self.outlet_count}")
             return False
         return True
 
@@ -128,7 +128,7 @@ class Dlidc3(HardwareSensorBase):
         self._send_command(cmd)
         self.version = self._read_reply().strip()
         # outlet names and states
-        for n in range(self.outlet_count):
+        for n in range(1, self.outlet_count + 1):
             name = self.get_outlet_name(n)
             self.outlet_names.append(str(name))
             state = self.outlet_status(n)
@@ -168,8 +168,9 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return None
+        idx = outlet_num - 1
 
-        cmd = f"{GET_PREFIX} {self.outlet_commands["name"][0].format(outlet_num=outlet_num)}"
+        cmd = f"{GET_PREFIX} {self.outlet_commands["name"][0].format(outlet_num=idx)}"
         if self._send_command(cmd):
             return self._read_reply().strip()
         return None
@@ -187,12 +188,13 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return None
+        idx = outlet_num - 1
 
         cmd = f"{SET_PREFIX} {self.outlet_commands["name"][0].format(
-            outlet_num=outlet_num)} '\"{outlet_name}\"'"
+            outlet_num=idx)} '\"{outlet_name}\"'"
         if self._send_command(cmd):
             _ = self._read_reply()
-            self.outlet_names[outlet_num] = self.get_outlet_name(outlet_num)
+            self.outlet_names[idx] = self.get_outlet_name(outlet_num)
         return None
 
     def outlet_status(self, outlet_num:int) -> Optional[bool]:
@@ -204,8 +206,9 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return None
+        idx = outlet_num - 1
 
-        cmd = f"{GET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=outlet_num)}"
+        cmd = f"{GET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)}"
         if self._send_command(cmd):
             state = self._read_reply().strip()
             return "true" in state
@@ -224,11 +227,12 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return False
+        idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=outlet_num)} true"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)} true"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
-            self.outlet_onoff[outlet_num] = 1
+            self.outlet_onoff[idx] = 1
             return True
         return False
 
@@ -245,11 +249,12 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return False
+        idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=outlet_num)} false"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)} false"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
-            self.outlet_onoff[outlet_num] = 0
+            self.outlet_onoff[idx] = 0
             return True
         return False
 
@@ -262,8 +267,9 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return None
+        idx = outlet_num - 1
 
-        cmd = f"{GET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=outlet_num)}"
+        cmd = f"{GET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=idx)}"
         if self._send_command(cmd):
             state = self._read_reply().strip()
             return "true" in state
@@ -282,8 +288,9 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return False
+        idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=outlet_num)} true"
+        cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=idx)} true"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             return True
@@ -302,9 +309,10 @@ class Dlidc3(HardwareSensorBase):
         # check outlet number
         if not self._validate_outlet(outlet_num):
             return False
+        idx = outlet_num - 1
 
         cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(
-            outlet_num=outlet_num)} false"
+            outlet_num=idx)} false"
         if self._send_command(cmd):
             _ = self._read_reply().strip()
             return True
@@ -335,7 +343,8 @@ class Dlidc3(HardwareSensorBase):
         if item not in self.outlet_commands:
             self.report_error(f"Outlet {item} command not found in DLI DC 3")
             return None
-        cmd = f"{GET_PREFIX} {self.outlet_commands[item][0].format(outlet_num=n)}"
+        idx = n - 1
+        cmd = f"{GET_PREFIX} {self.outlet_commands[item][0].format(outlet_num=idx)}"
         if not self._send_command(cmd):
             return None
         result = self._read_reply().strip()
