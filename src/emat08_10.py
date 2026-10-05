@@ -492,7 +492,7 @@ class EatonEMAT(HardwareDeviceBase):
         if p < 0 or p > 2:
             self.report_error("Outlet autostart status must be between 0 and 2")
             return False
-        cmd = "set " + self.set_commands["set_autostart"].format(n=n, p=p)
+        cmd = "set " + self.set_commands["set_auto_restart"].format(n=n, p=p)
         return self._send_command(cmd)
 
     def set_outlet_name(self, n:int, name: str) -> bool:
