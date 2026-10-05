@@ -86,7 +86,7 @@ class Dlidc3(HardwareSensorBase):
     def _send_command(self, cmd: str, *args, **kwargs) -> bool: # pylint: disable=unused-argument
         """Send command to DLI DC 3 Power Controller"""
 
-        if not self.is_connected() or self.ssh is None:
+        if self.ssh is None or not self.is_connected():
             self.report_error("Device is not connected")
             return False
 
