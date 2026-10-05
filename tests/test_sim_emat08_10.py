@@ -3,7 +3,6 @@
 import asyncio
 
 import pytest
-import telnetlib3
 
 from src.emat08_10 import EatonEMAT
 
@@ -129,7 +128,7 @@ def fake_pdu(monkeypatch):
         device.connect_kwargs = kwargs
         return FakeReader(device), FakeWriter(device)
 
-    monkeypatch.setattr(telnetlib3, "open_connection", fake_open_connection)
+    monkeypatch.setattr("telnetlib3.open_connection", fake_open_connection)
     return device
 
 
