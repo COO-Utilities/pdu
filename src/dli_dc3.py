@@ -1,8 +1,8 @@
 """Class for DLI DC 3 Power Controller"""
-from typing import Optional, Union, List
+import re
+from typing import Optional, Union, List, Tuple
 import paramiko
 from paramiko.channel import ChannelFile
-from emat08_10 import trailing_int
 
 try:
     from hardware_device_base import HardwareSensorBase
@@ -11,6 +11,12 @@ except ModuleNotFoundError:
 
 GET_PREFIX = "uom get"
 SET_PREFIX = "uom set"
+INVOKE_PREFIX = "uom invoke"
+
+def trailing_int(s: str) -> Optional[Tuple[str, int]]:
+    """ return trailing integer from string or None """
+    m = re.search(r"^(.+?)(\d+)$", s)
+    return (m.group(1), int(m.group(2))) if m else None
 
 # pylint: disable=too-many-instance-attributes
 class Dlidc3(HardwareSensorBase):
@@ -41,6 +47,7 @@ class Dlidc3(HardwareSensorBase):
             "state": ("relay/outlets/{outlet_num}/state", "bool"),
             "critical": ("relay/outlets/{outlet_num}/critical", "bool"),
             "cycle_delay": ("relay/outlets/{outlet_num}/cycle_delay", "int"),
+            "cycle": ("relay/outlets/{outlet_num}/cycle", "bool"),
             "locked": ("relay/outlets/{outlet_num}/locked", "bool"),
             "transient_state": ("relay/outlets/{outlet_num}/transient_state", "bool"),
             "physical_state": ("relay/outlets/{outlet_num}/physical_state", "bool")
@@ -51,8 +58,7 @@ class Dlidc3(HardwareSensorBase):
             "version": "relay/version"
         }
 
-    # pylint: disable=W0221
-    def connect(self, host:str, port:int = 23, username:str = "", password:str = "",
+    def connect(self, host:str, port:int = 23, username:str = "", password:str = "", # pylint: disable=W0221,unused-argument
                 **kwargs) -> None:
         """Connect to DLI DC 3 Power Controller"""
 
@@ -61,10 +67,11 @@ class Dlidc3(HardwareSensorBase):
         self.username = username
         self.password = password
 
-        self.ssh = paramiko.SSHClient()
-        self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.ssh = ssh
         try:
-            self.ssh.connect(hostname=host, username=username, password=password)
+            ssh.connect(hostname=host, username=username, password=password)
         except paramiko.SSHException as ex:
             self.report_error(str(ex))
             return
@@ -72,13 +79,14 @@ class Dlidc3(HardwareSensorBase):
 
     def disconnect(self) -> None:
         """Disconnect from DLI DC 3 Power Controller"""
-        self.ssh.close()
+        if self.ssh is not None:
+            self.ssh.close()
         self._set_connected(False)
 
-    def _send_command(self, cmd: str, *args, **kwargs) -> bool:
+    def _send_command(self, cmd: str, *args, **kwargs) -> bool: # pylint: disable=unused-argument
         """Send command to DLI DC 3 Power Controller"""
 
-        if not self.is_connected():
+        if self.ssh is None or not self.is_connected():
             self.report_error("Device is not connected")
             return False
 
@@ -108,6 +116,15 @@ class Dlidc3(HardwareSensorBase):
             return None
         return self.stdout.read().decode("utf-8")
 
+    def _query(self, cmd: str) -> Optional[str]:
+        """Send command and return stripped reply, or None on failure"""
+        if not self._send_command(cmd):
+            return None
+        reply = self._read_reply()
+        if reply is None:
+            return None
+        return reply.strip()
+
     def _validate_outlet(self, outlet_num:int) -> bool:
         """Validate outlet number (1-based)"""
         if outlet_num < 1 or outlet_num > self.outlet_count:
@@ -115,22 +132,30 @@ class Dlidc3(HardwareSensorBase):
             return False
         return True
 
+    def _ready(self, outlet_num:int) -> bool:
+        """Are we ready to send a command?"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return False
+        if not self.initialized:
+            self.report_error("Device is not initialized")
+            return False
+        if not self._validate_outlet(outlet_num):
+            return False
+        return True
+
     def initialize(self) -> None:
         """Initialize DLI DC 3 Power Controller Class Instance"""
         # model
-        cmd = f"{GET_PREFIX} {self.device_commands["model"]}"
-        self._send_command(cmd)
-        self.model = self._read_reply().strip()
+        self.model = str(self.get_device_model())
         # name
         self.name = str(self.get_device_name())
         # version
-        cmd = f"{GET_PREFIX} {self.device_commands["version"]}"
-        self._send_command(cmd)
-        self.version = self._read_reply().strip()
+        self.version = str(self.get_device_version())
         # outlet names and states
         for n in range(1, self.outlet_count + 1):
             name = self.get_outlet_name(n)
-            self.outlet_names.append(str(name))
+            self.outlet_names.append(name if name is not None else "")
             state = self.outlet_status(n)
             self.outlet_onoff.append(1 if state else 0)
         self.initialized = True
@@ -142,9 +167,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         cmd = f"{GET_PREFIX} {self.device_commands["name"]}"
-        if self._send_command(cmd):
-            return self._read_reply().strip()
-        return None
+        return self._query(cmd)
 
     def set_device_name(self, device_name:str) -> bool:
         """Set device name for DLI DC 3 Power Controller"""
@@ -153,11 +176,28 @@ class Dlidc3(HardwareSensorBase):
             return False
 
         cmd = f"{SET_PREFIX} {self.device_commands["name"]} '\"{device_name}\"'"
-        if self._send_command(cmd):
-            _ = self._read_reply().strip()
+        if self._query(cmd) is not None:
             self.name = device_name
             return True
         return False
+
+    def get_device_model(self) -> Optional[str]:
+        """Get device model for DLI DC 3 Power Controller"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return None
+
+        cmd = f"{GET_PREFIX} {self.device_commands["model"]}"
+        return self._query(cmd)
+
+    def get_device_version(self) -> Optional[str]:
+        """Get device version for DLI DC 3 Power Controller"""
+        if not self.is_connected():
+            self.report_error("Device is not connected")
+            return None
+
+        cmd = f"{GET_PREFIX} {self.device_commands["version"]}"
+        return self._query(cmd)
 
     def get_outlet_name(self, outlet_num:int) -> Union[str, None]:
         """Retrieve outlet name from DLI DC 3 Power Controller"""
@@ -171,30 +211,21 @@ class Dlidc3(HardwareSensorBase):
         idx = outlet_num - 1
 
         cmd = f"{GET_PREFIX} {self.outlet_commands["name"][0].format(outlet_num=idx)}"
-        if self._send_command(cmd):
-            return self._read_reply().strip()
-        return None
+        return self._query(cmd)
 
     def set_outlet_name(self, outlet_num:int, outlet_name:str) -> None:
         """Set outlet name from DLI DC 3 Power Controller"""
-        if not self.is_connected():
-            self.report_error("Device is not connected")
+        if not self._ready(outlet_num):
             return None
 
-        if not self.initialized:
-            self.report_error("Device is not initialized")
-            return None
-
-        # check outlet number
-        if not self._validate_outlet(outlet_num):
-            return None
         idx = outlet_num - 1
 
         cmd = f"{SET_PREFIX} {self.outlet_commands["name"][0].format(
             outlet_num=idx)} '\"{outlet_name}\"'"
-        if self._send_command(cmd):
-            _ = self._read_reply()
-            self.outlet_names[idx] = self.get_outlet_name(outlet_num)
+        if self._query(cmd) is not None:
+            name = self.get_outlet_name(outlet_num)
+            if name is not None:
+                self.outlet_names[idx] = name
         return None
 
     def outlet_status(self, outlet_num:int) -> Optional[bool]:
@@ -209,126 +240,87 @@ class Dlidc3(HardwareSensorBase):
         idx = outlet_num - 1
 
         cmd = f"{GET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)}"
-        if self._send_command(cmd):
-            state = self._read_reply().strip()
-            return "true" in state
-        return None
+        state = self._query(cmd)
+        if state is None:
+            return None
+        return "true" in state
 
     def outlet_on(self, outlet_num:int) -> bool:
         """Set outlet on"""
-        if not self.is_connected():
-            self.report_error("Device is not connected")
+        if not self._ready(outlet_num):
             return False
 
-        if not self.initialized:
-            self.report_error("Device is not initialized")
-            return False
-
-        # check outlet number
-        if not self._validate_outlet(outlet_num):
-            return False
         idx = outlet_num - 1
 
         cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)} true"
-        if self._send_command(cmd):
-            _ = self._read_reply().strip()
+        if self._query(cmd) is not None:
             self.outlet_onoff[idx] = 1
             return True
         return False
 
     def outlet_off(self, outlet_num:int) -> bool:
         """Set outlet off"""
-        if not self.is_connected():
-            self.report_error("Device is not connected")
+        if not self._ready(outlet_num):
             return False
 
-        if not self.initialized:
-            self.report_error("Device is not initialized")
-            return False
-
-        # check outlet number
-        if not self._validate_outlet(outlet_num):
-            return False
         idx = outlet_num - 1
 
         cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)} false"
-        if self._send_command(cmd):
-            _ = self._read_reply().strip()
+        if self._query(cmd) is not None:
             self.outlet_onoff[idx] = 0
             return True
         return False
 
+    def outlet_cycle(self, outlet_num:int) -> bool:
+        """Power cycle outlet"""
+        if not self._ready(outlet_num):
+            return False
+
+        idx = outlet_num - 1
+
+        cmd = f"{INVOKE_PREFIX} {self.outlet_commands["cycle"][0].format(outlet_num=idx)}"
+        retval = self._query(cmd)
+        if retval is None:
+            return False
+        return "true" in retval
+
     def lock_status(self, outlet_num:int) -> Optional[bool]:
         """Retrieve outlet state from DLI DC 3 Power Controller"""
-        if not self.is_connected():
-            self.report_error("Device is not connected")
+        if not self._ready(outlet_num):
             return None
 
-        # check outlet number
-        if not self._validate_outlet(outlet_num):
-            return None
         idx = outlet_num - 1
 
         cmd = f"{GET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=idx)}"
-        if self._send_command(cmd):
-            state = self._read_reply().strip()
-            return "true" in state
-        return None
+        state = self._query(cmd)
+        if state is None:
+            return None
+        return "true" in state
 
     def lock_outlet(self, outlet_num:int) -> bool:
         """Lock outlet state"""
-        if not self.is_connected():
-            self.report_error("Device is not connected")
+        if not self._ready(outlet_num):
             return False
 
-        if not self.initialized:
-            self.report_error("Device is not initialized")
-            return False
-
-        # check outlet number
-        if not self._validate_outlet(outlet_num):
-            return False
         idx = outlet_num - 1
 
         cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=idx)} true"
-        if self._send_command(cmd):
-            _ = self._read_reply().strip()
-            return True
-        return False
+        return self._query(cmd) is not None
 
     def unlock_outlet(self, outlet_num:int) -> bool:
         """Unlock outlet state"""
-        if not self.is_connected():
-            self.report_error("Device is not connected")
+        if not self._ready(outlet_num):
             return False
 
-        if not self.initialized:
-            self.report_error("Device is not initialized")
-            return False
-
-        # check outlet number
-        if not self._validate_outlet(outlet_num):
-            return False
         idx = outlet_num - 1
 
         cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(
             outlet_num=idx)} false"
-        if self._send_command(cmd):
-            _ = self._read_reply().strip()
-            return True
-        return False
+        return self._query(cmd) is not None
 
     def get_atomic_value(self, item: str ="") -> Union[float, int, str, None]:
         """Get atomic values from DLI DC 3 Power Controller"""
         # pylint: disable=too-many-return-statements
-        if not self.is_connected():
-            self.report_error("Device is not connected")
-            return None
-
-        if not self.initialized:
-            self.report_error("Device is not initialized")
-            return None
-
         intup = trailing_int(item)
         # get value for specified outlet
         if intup is None:
@@ -337,17 +329,15 @@ class Dlidc3(HardwareSensorBase):
         # get value for specific outlet
         n = intup[1]
         item = intup[0]
-        # check outlet number
-        if not self._validate_outlet(n):
+        # check readiness
+        if not self._ready(n):
             return None
         if item not in self.outlet_commands:
             self.report_error(f"Outlet {item} command not found in DLI DC 3")
             return None
         idx = n - 1
         cmd = f"{GET_PREFIX} {self.outlet_commands[item][0].format(outlet_num=idx)}"
-        if not self._send_command(cmd):
-            return None
-        result = self._read_reply().strip()
+        result = self._query(cmd)
         if result is None:
             self.report_error(f"Outlet {item} null return value")
             return None
