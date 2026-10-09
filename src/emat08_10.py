@@ -233,14 +233,28 @@ class EatonEMAT(HardwareDeviceBase):
         self._reader = reader
         self._writer = writer
 
-        # If creds provided, perform a minimal login
-        if username:
-            await self._await_any_prompt_and_write(self._login_user_prompts, username + self._eol)
-        if password:
-            await self._await_any_prompt_and_write(self._login_pass_prompts, password + self._eol)
+        try:
+            # If creds provided, perform a minimal login
+            if username:
+                await self._await_any_prompt_and_write(self._login_user_prompts,
+                                                       username + self._eol)
+            if password:
+                await self._await_any_prompt_and_write(self._login_pass_prompts,
+                                                       password + self._eol)
 
-        # wait for a prompt to indicate readiness
-        await self._read_until_prompt()
+            # wait for a prompt to indicate readiness; no prompt means login failed
+            data = await self._read_until_prompt()
+            if not self._prompt_re.search(data):
+                raise ConnectionError(f"Login failed: no command prompt (got {data.strip()!r})")
+        except Exception:
+            # close the half-open session so the caller sees a clean failure
+            try:
+                writer.close()
+            except Exception:
+                pass
+            self._reader = None
+            self._writer = None
+            raise
 
     def disconnect(self) -> None:
         """Close the Telnet session and stop the private event loop."""
@@ -562,6 +576,7 @@ class EatonEMAT(HardwareDeviceBase):
                     return
             else:
                 await asyncio.sleep(0.05)
+        raise TimeoutError(f"Timed out waiting for prompt {prompts} (got {buff.strip()!r})")
 
     async def _read_until_prompt(self) -> str:
         """Read until prompt regex matches or timeout expires."""
