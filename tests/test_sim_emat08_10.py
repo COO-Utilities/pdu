@@ -20,8 +20,9 @@ class FakePDU:
     """
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, outlet_count: int = 4):
+    def __init__(self, outlet_count: int = 4, password: str = "secret"):
         self.outlet_count = outlet_count
+        self.password = password
         self.props = {
             "PDU.PowerSummary.iPartNumber": "EMAT08-10",
             "PDU.PowerSummary.iVersion": "1.2.3",
@@ -59,6 +60,10 @@ class FakePDU:
             self.login.append(line)
             self._rx += "Password: "
         elif len(self.login) == 1:
+            if line != self.password:
+                self.login.clear()
+                self._rx += EOL + "Login incorrect" + EOL + "login: "
+                return
             self.login.append(line)
             self._rx += EOL + PROMPT
         else:
@@ -164,6 +169,18 @@ def test_connect_requires_credentials(fake_pdu):
     assert emat.connect("10.0.0.5", 1234) is False
     assert emat.is_connected() is False
     assert fake_pdu.connect_kwargs is None
+
+
+def test_connect_fails_on_bad_password(fake_pdu):
+    """ Test connect reports failure and stays disconnected on a rejected login """
+    emat = EatonEMAT(read_timeout=1.0)
+
+    assert emat.connect("10.0.0.5", 1234, username="admin", password="wrong") is False
+    assert emat.is_connected() is False
+    assert fake_pdu.login == []
+    assert fake_pdu.closed is True
+
+    emat.disconnect()
 
 
 def test_initialize_reads_device(pdu):
