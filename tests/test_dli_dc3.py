@@ -113,3 +113,15 @@ def test_get_atomic_value_uses_one_based_suffix(fake_ssh):
 
     assert pdu.get_atomic_value("state1") is True
     assert client.commands[-1] == "uom get relay/outlets/0/state"
+
+
+def test_initialize_twice_does_not_grow_lists(fake_ssh):
+    """ re-initializing should replace, not append to, the cached outlet lists """
+    pdu = Dlidc3(log=False)
+    pdu.connect("10.0.0.5")
+
+    pdu.initialize()
+    pdu.initialize()
+
+    assert len(pdu.outlet_names) == pdu.outlet_count
+    assert len(pdu.outlet_onoff) == pdu.outlet_count

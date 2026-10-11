@@ -1,7 +1,7 @@
 # pdu — Low-level util for Power Distribution Units
 
 Minimal Python package for controlling PDUs.  
-Currently includes a **SSH** driver for **Eaton EMAT-08 / EMAT-10** units.
+Currently includes a **Telnet** driver for **Eaton EMAT-08 / EMAT-10** units and an **SSH** driver for **DLI DC3** units.
 
 - Thread-safe send/receive
 
@@ -44,7 +44,7 @@ from src.emat08_10 import EatonEMAT
 # Create driver (3s read timeout)
 pdu = EatonEMAT()
 
-# Connect over SSH (default port is 22)
+# Connect over Telnet (default port is 23)
 assert pdu.connect(
   host="redeaton1",
   port=23,
@@ -59,14 +59,14 @@ pdu.initialize()
 pdu.outlet_on(3)
 
 # Get outlet 3 status
-pdu.get_atomic_value("status", 3)
+pdu.get_atomic_value("outlet_status3")
 
 # Query outlet 3 status (reads PresentStatus.SwitchOnOff)
 reply = pdu.outlet_status(3)
 print("Status:", reply)
 
 # Get all outlets' status
-pdu.get_atomic_value("status", "x")
+pdu.get_all_values("outlet_status")
 
 # Device info
 print("Model:", pdu.get_atomic_value("model"))  # PDU.PowerSummary.iPartNumber
@@ -78,6 +78,87 @@ pdu.disconnect()
 
 ```
 
+### Use the DLI DC3 SSH driver
 
+```python
+from src.dli_dc3 import Dlidc3
 
+# Create driver
+pdu = Dlidc3()
 
+# Connect over SSH (port 22)
+pdu.connect(
+  host="dlipdu1",
+  username="admin",
+  password="your_password",
+)
+assert pdu.is_connected()
+
+# Initialize pdu object (reads model, name, version, outlet names and states)
+pdu.initialize()
+
+# Turn outlet 3 ON
+pdu.outlet_on(3)
+
+# Query outlet 3 status (True = on, False = off)
+print("Status:", pdu.outlet_status(3))
+
+# Get outlet 3 state through the generic getter (outlet number is a suffix)
+pdu.get_atomic_value("state3")
+
+# Power-cycle outlet 3
+pdu.outlet_cycle(3)
+
+# Rename outlet 3
+pdu.set_outlet_name(3, "Camera")
+print("Name:", pdu.get_outlet_name(3))
+
+# Lock outlet 3 so it can't be switched
+pdu.lock_outlet(3)
+
+# Device info (cached by initialize())
+print("Model:", pdu.model)
+print("Firmware Version:", pdu.version)
+
+# Clean up
+pdu.disconnect()
+
+```
+
+### Set plug names from a config file
+
+Installing the package also installs a `set-plug-names` command. It sets the
+outlet (plug) names on either supported PDU type from a YAML config file:
+
+```yaml
+type: emat08_10        # or dli_dc3
+host: redeaton1
+port: 23               # optional, default 23
+username: admin        # optional, default admin
+password: secret       # optional; prompted for if omitted
+plugs:
+  1: Camera
+  2: Filter wheel
+  3: Spare
+```
+
+Only the plugs listed are changed. Plug numbers are 1-based.
+
+```bash
+set-plug-names pdu.yaml
+```
+
+The command prints `OK` or `FAILED` for each plug. It exits with status 0 if
+every plug was set, 1 if any plug failed, and 2 if the config file could not be
+read or the PDU could not be reached.
+
+Leave `password` out of the file to be prompted for it, so it isn't stored in
+plain text.
+
+The same thing can be done from Python:
+
+```python
+from pdu.set_plug_names import set_plug_names
+
+results = set_plug_names("pdu.yaml")   # {1: True, 2: True, 3: True}
+```

@@ -153,6 +153,8 @@ class Dlidc3(HardwareSensorBase):
         # version
         self.version = str(self.get_device_version())
         # outlet names and states
+        self.outlet_names = []
+        self.outlet_onoff = []
         for n in range(1, self.outlet_count + 1):
             name = self.get_outlet_name(n)
             self.outlet_names.append(name if name is not None else "")
@@ -166,7 +168,7 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return None
 
-        cmd = f"{GET_PREFIX} {self.device_commands["name"]}"
+        cmd = f"{GET_PREFIX} {self.device_commands['name']}"
         return self._query(cmd)
 
     def set_device_name(self, device_name:str) -> bool:
@@ -175,7 +177,7 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return False
 
-        cmd = f"{SET_PREFIX} {self.device_commands["name"]} '\"{device_name}\"'"
+        cmd = f"{SET_PREFIX} {self.device_commands['name']} '\"{device_name}\"'"
         if self._query(cmd) is not None:
             self.name = device_name
             return True
@@ -187,7 +189,7 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return None
 
-        cmd = f"{GET_PREFIX} {self.device_commands["model"]}"
+        cmd = f"{GET_PREFIX} {self.device_commands['model']}"
         return self._query(cmd)
 
     def get_device_version(self) -> Optional[str]:
@@ -196,7 +198,7 @@ class Dlidc3(HardwareSensorBase):
             self.report_error("Device is not connected")
             return None
 
-        cmd = f"{GET_PREFIX} {self.device_commands["version"]}"
+        cmd = f"{GET_PREFIX} {self.device_commands['version']}"
         return self._query(cmd)
 
     def get_outlet_name(self, outlet_num:int) -> Union[str, None]:
@@ -210,7 +212,7 @@ class Dlidc3(HardwareSensorBase):
             return None
         idx = outlet_num - 1
 
-        cmd = f"{GET_PREFIX} {self.outlet_commands["name"][0].format(outlet_num=idx)}"
+        cmd = f"{GET_PREFIX} {self.outlet_commands['name'][0].format(outlet_num=idx)}"
         return self._query(cmd)
 
     def set_outlet_name(self, outlet_num:int, outlet_name:str) -> None:
@@ -220,8 +222,8 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["name"][0].format(
-            outlet_num=idx)} '\"{outlet_name}\"'"
+        path = self.outlet_commands['name'][0].format(outlet_num=idx)
+        cmd = f"{SET_PREFIX} {path} '\"{outlet_name}\"'"
         if self._query(cmd) is not None:
             name = self.get_outlet_name(outlet_num)
             if name is not None:
@@ -239,7 +241,7 @@ class Dlidc3(HardwareSensorBase):
             return None
         idx = outlet_num - 1
 
-        cmd = f"{GET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)}"
+        cmd = f"{GET_PREFIX} {self.outlet_commands['state'][0].format(outlet_num=idx)}"
         state = self._query(cmd)
         if state is None:
             return None
@@ -252,7 +254,7 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)} true"
+        cmd = f"{SET_PREFIX} {self.outlet_commands['state'][0].format(outlet_num=idx)} true"
         if self._query(cmd) is not None:
             self.outlet_onoff[idx] = 1
             return True
@@ -265,7 +267,7 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["state"][0].format(outlet_num=idx)} false"
+        cmd = f"{SET_PREFIX} {self.outlet_commands['state'][0].format(outlet_num=idx)} false"
         if self._query(cmd) is not None:
             self.outlet_onoff[idx] = 0
             return True
@@ -278,7 +280,7 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        cmd = f"{INVOKE_PREFIX} {self.outlet_commands["cycle"][0].format(outlet_num=idx)}"
+        cmd = f"{INVOKE_PREFIX} {self.outlet_commands['cycle'][0].format(outlet_num=idx)}"
         retval = self._query(cmd)
         if retval is None:
             return False
@@ -291,7 +293,7 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        cmd = f"{GET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=idx)}"
+        cmd = f"{GET_PREFIX} {self.outlet_commands['locked'][0].format(outlet_num=idx)}"
         state = self._query(cmd)
         if state is None:
             return None
@@ -304,7 +306,7 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(outlet_num=idx)} true"
+        cmd = f"{SET_PREFIX} {self.outlet_commands['locked'][0].format(outlet_num=idx)} true"
         return self._query(cmd) is not None
 
     def unlock_outlet(self, outlet_num:int) -> bool:
@@ -314,8 +316,7 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        cmd = f"{SET_PREFIX} {self.outlet_commands["locked"][0].format(
-            outlet_num=idx)} false"
+        cmd = f"{SET_PREFIX} {self.outlet_commands['locked'][0].format(outlet_num=idx)} false"
         return self._query(cmd) is not None
 
     def get_atomic_value(self, item: str ="") -> Union[float, int, str, None]:
