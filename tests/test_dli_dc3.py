@@ -125,3 +125,19 @@ def test_initialize_twice_does_not_grow_lists(fake_ssh):
 
     assert len(pdu.outlet_names) == pdu.outlet_count
     assert len(pdu.outlet_onoff) == pdu.outlet_count
+
+
+def test_set_outlet_name_strips_json_quotes(fake_ssh):
+    """ uom returns string values JSON quoted; cached names should not include the quotes """
+    pdu = Dlidc3(log=False)
+    pdu.connect("10.0.0.5")
+    pdu.initialized = True
+    pdu.outlet_names = [""] * pdu.outlet_count
+
+    client = fake_ssh["instance"]
+    client.replies.extend([b"", b'"Camera"\n'])
+
+    pdu.set_outlet_name(1, "Camera")
+    assert client.commands[0] == "uom set relay/outlets/0/name '\"Camera\"'"
+    assert client.commands[1] == "uom get relay/outlets/0/name"
+    assert pdu.outlet_names[0] == "Camera"

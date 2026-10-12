@@ -1,4 +1,5 @@
 """Class for DLI DC 3 Power Controller"""
+import json
 import re
 from typing import Optional, Union, List, Tuple
 import paramiko
@@ -125,6 +126,19 @@ class Dlidc3(HardwareSensorBase):
             return None
         return reply.strip()
 
+    def _query_str(self, cmd: str) -> Optional[str]:
+        """Send command and return reply with JSON string quotes removed"""
+        reply = self._query(cmd)
+        if reply is None:
+            return None
+        # uom returns string values JSON encoded, e.g. "Camera" with quotes
+        if len(reply) >= 2 and reply[0] == '"' and reply[-1] == '"':
+            try:
+                return str(json.loads(reply))
+            except ValueError:
+                return reply[1:-1]
+        return reply
+
     def _validate_outlet(self, outlet_num:int) -> bool:
         """Validate outlet number (1-based)"""
         if outlet_num < 1 or outlet_num > self.outlet_count:
@@ -169,7 +183,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         cmd = f"{GET_PREFIX} {self.device_commands['name']}"
-        return self._query(cmd)
+        return self._query_str(cmd)
 
     def set_device_name(self, device_name:str) -> bool:
         """Set device name for DLI DC 3 Power Controller"""
@@ -190,7 +204,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         cmd = f"{GET_PREFIX} {self.device_commands['model']}"
-        return self._query(cmd)
+        return self._query_str(cmd)
 
     def get_device_version(self) -> Optional[str]:
         """Get device version for DLI DC 3 Power Controller"""
@@ -199,7 +213,7 @@ class Dlidc3(HardwareSensorBase):
             return None
 
         cmd = f"{GET_PREFIX} {self.device_commands['version']}"
-        return self._query(cmd)
+        return self._query_str(cmd)
 
     def get_outlet_name(self, outlet_num:int) -> Union[str, None]:
         """Retrieve outlet name from DLI DC 3 Power Controller"""
@@ -213,7 +227,7 @@ class Dlidc3(HardwareSensorBase):
         idx = outlet_num - 1
 
         cmd = f"{GET_PREFIX} {self.outlet_commands['name'][0].format(outlet_num=idx)}"
-        return self._query(cmd)
+        return self._query_str(cmd)
 
     def set_outlet_name(self, outlet_num:int, outlet_name:str) -> None:
         """Set outlet name from DLI DC 3 Power Controller"""
@@ -357,4 +371,6 @@ class Dlidc3(HardwareSensorBase):
             except ValueError:
                 self.report_error(f"Outlet {item} bool parse error")
                 result = None
+        elif len(result) >= 2 and result[0] == '"' and result[-1] == '"':
+            result = result[1:-1]
         return result
