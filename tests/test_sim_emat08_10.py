@@ -194,6 +194,14 @@ def test_initialize_reads_device(pdu):
     assert pdu.outlet_onoff == [0, 0, 0, 0]
 
 
+def test_initialize_twice_does_not_grow_lists(pdu):
+    """ Test re-initializing replaces, not appends to, the cached outlet lists """
+    assert pdu.initialize()
+
+    assert pdu.outlet_names == ["Outlet1", "Outlet2", "Outlet3", "Outlet4"]
+    assert pdu.outlet_onoff == [0, 0, 0, 0]
+
+
 def test_outlet_on_sends_command(pdu, fake_pdu):
     """ test outlet on sends command """
     assert pdu.outlet_on(2) is True

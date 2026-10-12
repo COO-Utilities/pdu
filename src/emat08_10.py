@@ -541,6 +541,8 @@ class EatonEMAT(HardwareDeviceBase):
         self.serial = str(self.get_atomic_value("serial_number"))
         self.initialized = True
 
+        self.outlet_names = []
+        self.outlet_onoff = []
         names = self.get_all_values("name")
         if names:
             for name in names.split("|"):
