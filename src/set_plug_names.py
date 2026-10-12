@@ -87,6 +87,7 @@ def set_plug_names(config_file: str) -> Dict[int, bool]:
         pdu.initialize()
         for num, name in sorted(config["plugs"].items()):
             results[num] = _set_one(pdu, num, str(name))
+            print(f"Plug {num}: {name} - {'OK' if results[num] else 'FAILED'}")
     finally:
         pdu.disconnect()
     return results
@@ -103,8 +104,6 @@ def main() -> int:
     except (OSError, ValueError, yaml.YAMLError) as e:
         print(f"set-plug-names: {e}", file=sys.stderr)
         return 2
-    for num, ok in results.items():
-        print(f"Plug {num}: {'OK' if ok else 'FAILED'}")
     return 0 if all(results.values()) else 1
 
 
