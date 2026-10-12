@@ -15,8 +15,17 @@ readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
     "telnetlib3",
+    "paramiko",
+    "pyyaml",
     "hardware_device_base@git+https://github.com/COO-Utilities/hardware_device_base@v1.0.1"
 ]
+[project.scripts]
+set-plug-names = "pdu.set_plug_names:main"
+
+[tool.setuptools]
+package-dir = {"pdu" = "src"}
+packages = ["pdu"]
+
 [tool.pytest.ini_options]
 pythonpath = [
     "."
