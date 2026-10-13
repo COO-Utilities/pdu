@@ -244,6 +244,19 @@ class Dlidc3(HardwareSensorBase):
                 self.outlet_names[idx] = name
         return None
 
+    def set_outlet_cycle_delay(self, outlet_num:int, cycle_delay: int =1) -> bool:
+        """Set outlet cycle delay in seconds from DLI DC 3 Power Controller"""
+        if not self._ready(outlet_num):
+            return False
+
+        idx = outlet_num - 1
+
+        path = self.outlet_commands['cycle_delay'][0].format(outlet_num=idx)
+        cmd = f"{SET_PREFIX} {path} '\"{cycle_delay}\"'"
+        if self._send_command(cmd):
+            return True
+        return False
+
     def outlet_status(self, outlet_num:int) -> Optional[bool]:
         """Retrieve outlet state from DLI DC 3 Power Controller"""
         if not self.is_connected():
