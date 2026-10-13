@@ -252,7 +252,7 @@ class Dlidc3(HardwareSensorBase):
         idx = outlet_num - 1
 
         path = self.outlet_commands['cycle_delay'][0].format(outlet_num=idx)
-        cmd = f"{SET_PREFIX} {path} '\"{cycle_delay}\"'"
+        cmd = f"{SET_PREFIX} {path} '{cycle_delay}'"
         if self._send_command(cmd):
             return True
         return False
