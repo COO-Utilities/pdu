@@ -196,7 +196,7 @@ class Dlidc3(HardwareSensorBase):
                 cmd = f"{GET_PREFIX} {self.outlet_configurations['locked'][0].format(outlet_num=n)}"
                 locked = self._query_str(cmd)
                 self.outlet_locked.append("true" in locked if locked is not None else False)
-                state = self.outlet_status(n)
+                state = self.outlet_status(n+1)
                 self.outlet_onoff.append(1 if state else 0)
             self.initialized = True
 
