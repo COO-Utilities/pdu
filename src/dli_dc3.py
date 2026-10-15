@@ -185,16 +185,16 @@ class Dlidc3(HardwareSensorBase):
             for n in range(1, self.outlet_count + 1):
                 # outlet name
                 cmd = f"{GET_PREFIX} {self.outlet_configurations['name'][0].format(outlet_num=n)}"
-                name = str(self._query_str(cmd))
+                name = self._query_str(cmd)
                 self.outlet_names.append(name if name is not None else "")
                 # outlet cycle delay
                 cmd = "{GET_PREFIX} "
                 cmd += f"{self.outlet_configurations['cycle_delay'][0].format(outlet_num=n)}"
-                cycle_delay = str(self._query_str(cmd))
+                cycle_delay = self._query_str(cmd)
                 self.outlet_cycle_delay.append(int(cycle_delay) if cycle_delay is not None else 0)
                 # outlet lock state
                 cmd = f"{GET_PREFIX} {self.outlet_configurations['locked'][0].format(outlet_num=n)}"
-                locked = str(self._query_str(cmd))
+                locked = self._query_str(cmd)
                 self.outlet_locked.append("true" in locked if locked is not None else False)
                 state = self.outlet_status(n)
                 self.outlet_onoff.append(1 if state else 0)
