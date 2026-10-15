@@ -188,7 +188,7 @@ class Dlidc3(HardwareSensorBase):
                 name = self._query_str(cmd)
                 self.outlet_names.append(name if name is not None else "")
                 # outlet cycle delay
-                cmd = "{GET_PREFIX} "
+                cmd = f"{GET_PREFIX} "
                 cmd += f"{self.outlet_configurations['cycle_delay'][0].format(outlet_num=n)}"
                 cycle_delay = self._query_str(cmd)
                 self.outlet_cycle_delay.append(int(cycle_delay) if cycle_delay is not None else 0)
