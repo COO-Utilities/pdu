@@ -1,7 +1,8 @@
 # pdu — Low-level util for Power Distribution Units
 
 Minimal Python package for controlling PDUs.  
-Currently includes a **Telnet** driver for **Eaton EMAT-08 / EMAT-10** units and an **SSH** driver for **DLI DC3** units.
+Currently includes a **Telnet** driver for **Eaton EMAT-08 / EMAT-10** units and **SSH** drivers for
+**DLI DC3** and **WTI NPS Series** units.
 
 - Thread-safe send/receive
 
@@ -124,6 +125,69 @@ print("Firmware Version:", pdu.version)
 pdu.disconnect()
 
 ```
+
+### Use the WTI NPS SSH driver
+
+The NPS is driven through its text command line (CLI) over SSH, which is
+enabled at the factory (default IP `192.168.168.168`, username and password
+`super`). Section numbers (§) refer to the WTI User's Guide, Part No. 14527 Rev. C.
+
+```python
+from src.wti_nps import WtiNps
+
+# Create driver (5s read timeout)
+pdu = WtiNps()
+
+# Connect over SSH (port 22)
+pdu.connect(
+  host="wtipdu1",
+  username="super",
+  password="your_password",
+)
+assert pdu.is_connected()
+
+# Initialize pdu object (reads unit info with /J * and the plug table with /S)
+pdu.initialize()
+
+# Switch outlets (/ON, /OFF, /BOOT); a list switches several at once
+pdu.outlet_on(3)
+pdu.outlet_off([1, 2])
+pdu.outlet_cycle(4)
+
+# Query outlet 3 status (True = on, False = off; re-reads /S)
+print("Status:", pdu.outlet_status(3))
+
+# Get outlet 3 state through the generic getter (outlet number is a suffix)
+pdu.get_atomic_value("state3")   # also busy, name, boot_delay, default, priority
+
+# All outlets, as a dict keyed by plug id
+print(pdu.get_outlets())
+
+# Set every outlet to its Power Up Default state (/DPL)
+pdu.all_outlets_default()
+
+# Device info (cached by initialize())
+print("Model:", pdu.model)
+print("Firmware Version:", pdu.version)
+print("Temperature:", pdu.get_atomic_value("temperature"))
+
+# Clean up (logs out with /X)
+pdu.disconnect()
+
+```
+
+Notes:
+
+- Telnet is not supported, since it sends the password in plain text.
+- Switching commands add `,Y` to skip the "Sure? (Y/N)" prompt (§12.2).
+- The reply is read up to the CLI prompt (e.g. `NPS>`). If the Command Prompt
+  scripting option (§7.1.5) has been changed, pass `prompt_pattern=` to `WtiNps()`.
+- In Automated Mode (§7.1.5.3) the unit doesn't show the status screen after
+  switching, so call `get_outlets()` to refresh the cached outlet table.
+- The guide shows the `/S` and `/J *` screens only as images, so their parsers
+  are best guesses and have not been checked against a real unit yet.
+- Not yet implemented: setting plug names (so `set-plug-names` doesn't support
+  WTI yet), plug groups, current metering (`/M`) and alarm status (`/AS`).
 
 ### Set plug names from a config file
 
