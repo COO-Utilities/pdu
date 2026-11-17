@@ -50,9 +50,7 @@ class Dlidc3(HardwareSensorBase):
             "critical": ("relay/outlets/{outlet_num}/critical", "bool"),
             "cycle": ("relay/outlets/{outlet_num}/cycle", "bool"),
             "transient_state": ("relay/outlets/{outlet_num}/transient_state", "bool"),
-            "physical_state": ("relay/outlets/{outlet_num}/physical_state", "bool")
-        }
-        self.outlet_configurations = {
+            "physical_state": ("relay/outlets/{outlet_num}/physical_state", "bool"),
             "name": ("relay/outlets/{outlet_num}/name", "str"),
             "cycle_delay": ("relay/outlets/{outlet_num}/cycle_delay", "int"),
             "locked": ("relay/outlets/{outlet_num}/locked", "bool")
@@ -184,16 +182,16 @@ class Dlidc3(HardwareSensorBase):
             self.outlet_locked = []
             for n in range(0, self.outlet_count):
                 # outlet name
-                cmd = f"{GET_PREFIX} {self.outlet_configurations['name'][0].format(outlet_num=n)}"
+                cmd = f"{GET_PREFIX} {self.outlet_commands['name'][0].format(outlet_num=n)}"
                 name = self._query_str(cmd)
                 self.outlet_names.append(name if name is not None else "")
                 # outlet cycle delay
                 cmd = f"{GET_PREFIX} "
-                cmd += f"{self.outlet_configurations['cycle_delay'][0].format(outlet_num=n)}"
+                cmd += f"{self.outlet_commands['cycle_delay'][0].format(outlet_num=n)}"
                 cycle_delay = self._query_str(cmd)
                 self.outlet_cycle_delay.append(int(cycle_delay) if cycle_delay is not None else 0)
                 # outlet lock state
-                cmd = f"{GET_PREFIX} {self.outlet_configurations['locked'][0].format(outlet_num=n)}"
+                cmd = f"{GET_PREFIX} {self.outlet_commands['locked'][0].format(outlet_num=n)}"
                 locked = self._query_str(cmd)
                 self.outlet_locked.append("true" in locked if locked is not None else False)
                 state = self.outlet_status(n+1)
@@ -274,7 +272,7 @@ class Dlidc3(HardwareSensorBase):
 
         idx = outlet_num - 1
 
-        path = self.outlet_configurations['cycle_delay'][0].format(outlet_num=idx)
+        path = self.outlet_commands['cycle_delay'][0].format(outlet_num=idx)
         cmd = f"{SET_PREFIX} {path} '{cycle_delay}'"
         if self._send_command(cmd):
             self.outlet_cycle_delay[idx] = cycle_delay
