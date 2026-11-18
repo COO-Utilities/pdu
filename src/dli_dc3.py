@@ -233,15 +233,17 @@ class Dlidc3(HardwareSensorBase):
 
     def get_outlet_name(self, outlet_num:int) -> Union[str, None]:
         """Retrieve outlet name from DLI DC 3 Power Controller"""
-        if not self.initialized:
-            self.report_error("Device is not initialized")
+        if not self._ready(outlet_num):
             return None
 
-        # check outlet number
-        if not self._validate_outlet(outlet_num):
-            return None
         idx = outlet_num - 1
-        return self.outlet_names[idx] if self.outlet_names[idx] is not None else ""
+
+        # outlet name
+        cmd = f"{GET_PREFIX} {self.outlet_commands['name'][0].format(outlet_num=idx)}"
+        name = self._query_str(cmd)
+        self.outlet_names[idx] = name if name is not None else ""
+
+        return self.outlet_names[idx]
 
     def set_outlet_name(self, outlet_num:int, outlet_name:str) -> None:
         """Set outlet name from DLI DC 3 Power Controller"""
@@ -252,10 +254,8 @@ class Dlidc3(HardwareSensorBase):
 
         path = self.outlet_commands['name'][0].format(outlet_num=idx)
         cmd = f"{SET_PREFIX} {path} '\"{outlet_name}\"'"
-        if self._query(cmd) is not None:
-            name = self.get_outlet_name(outlet_num)
-            if name is not None:
-                self.outlet_names[idx] = name
+        if self._send_command(cmd):
+            self.outlet_names[idx] = outlet_name
         return None
 
     def get_outlet_cycle_delay(self, outlet_num:int) -> Union[int, None]:
